@@ -9,6 +9,7 @@ import { NotFoundPage } from '@/app/routes/not-found-page'
 import { skipSearchParamRevalidation } from '@/app/routes/revalidation'
 import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
 import { propertyHandles } from '@/features/properties/properties.handles'
+import { tenantHandles } from '@/features/tenants/tenants.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
 export const routes: RouteObject[] = [
@@ -98,9 +99,57 @@ export const routes: RouteObject[] = [
           {
             path: 'tenants',
             handle: navHandle('/tenants'),
-            lazy: async () => ({
-              Component: (await import('@/features/tenants/pages/tenants-page')).TenantsPage,
-            }),
+            children: [
+              {
+                index: true,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ TenantsPage }, { tenantsLoader }] = await Promise.all([
+                    import('@/features/tenants/pages/tenants-page'),
+                    import('@/features/tenants/tenants.loaders'),
+                  ])
+                  return { Component: TenantsPage, loader: tenantsLoader }
+                },
+              },
+              {
+                path: 'new',
+                handle: tenantHandles.create,
+                // Keep the ?propertyId&unitId preselection without refetching.
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ TenantCreatePage }, { tenantCreateLoader }] = await Promise.all([
+                    import('@/features/tenants/pages/tenant-create-page'),
+                    import('@/features/tenants/tenants.loaders'),
+                  ])
+                  return { Component: TenantCreatePage, loader: tenantCreateLoader }
+                },
+              },
+              {
+                path: ':tenantId',
+                handle: tenantHandles.detail,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ TenantDetailsPage }, { tenantDetailLoader }, { TenantRouteError }] = await Promise.all([
+                    import('@/features/tenants/pages/tenant-details-page'),
+                    import('@/features/tenants/tenants.loaders'),
+                    import('@/features/tenants/components/tenant-route-error'),
+                  ])
+                  return { Component: TenantDetailsPage, loader: tenantDetailLoader, ErrorBoundary: TenantRouteError }
+                },
+              },
+              {
+                path: ':tenantId/edit',
+                handle: tenantHandles.edit,
+                lazy: async () => {
+                  const [{ TenantEditPage }, { tenantEditLoader }, { TenantRouteError }] = await Promise.all([
+                    import('@/features/tenants/pages/tenant-edit-page'),
+                    import('@/features/tenants/tenants.loaders'),
+                    import('@/features/tenants/components/tenant-route-error'),
+                  ])
+                  return { Component: TenantEditPage, loader: tenantEditLoader, ErrorBoundary: TenantRouteError }
+                },
+              },
+            ],
           },
           {
             path: 'maintenance',

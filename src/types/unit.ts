@@ -19,14 +19,18 @@ export interface Unit {
   /** Monthly rent in USD: the contract rent when occupied, the asking rent otherwise. */
   rent: number
   status: UnitStatus
-  /** Current tenant; set only when occupied. */
+  /** Current tenant, copied from the active lease. Managed by the Tenants module. */
   tenantName: string | null
-  /** Lease end date (YYYY-MM-DD); set only when occupied. */
+  /** End date of the active lease (YYYY-MM-DD), copied from the lease. */
   leaseEndDate: string | null
   updatedAt: string
 }
 
-/** Values accepted when creating or editing a unit. */
+/**
+ * Values accepted when creating or editing a unit. Occupancy is controlled
+ * by leases: `status` may only be `vacant` or `maintenance` for units without
+ * an active lease, and must stay `occupied` (with unchanged rent) for leased units.
+ */
 export interface UnitInput {
   number: string
   type: UnitType
@@ -34,6 +38,4 @@ export interface UnitInput {
   areaSqft: number
   rent: number
   status: UnitStatus
-  tenantName: string | null
-  leaseEndDate: string | null
 }

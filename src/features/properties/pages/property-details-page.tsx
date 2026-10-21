@@ -59,7 +59,11 @@ export function PropertyDetailsPage() {
       action: { label: 'Edit property', onClick: () => void navigate(`/properties/${property.id}/edit`) },
     })
   }
-  const editUnit = useCallback((unit: Unit) => setDialog({ mode: 'edit', unit }), [])
+  const editUnit = useCallback(
+    (unit: Unit) =>
+      setDialog({ mode: 'edit', unit, lease: detail.currentLeases.find((lease) => lease.unitId === unit.id) ?? null }),
+    [detail.currentLeases],
+  )
   const handleSaved = () => {
     setDialog(null)
     void revalidator.revalidate()
@@ -99,6 +103,7 @@ export function PropertyDetailsPage() {
           <PropertyUnitsTab
             property={property}
             units={units}
+            leases={detail.currentLeases}
             stats={stats}
             canAddUnit={canAddUnit}
             onAddUnit={openAddUnit}

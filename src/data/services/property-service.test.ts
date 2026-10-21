@@ -32,9 +32,7 @@ const unitInput: UnitInput = {
   floor: 1,
   areaSqft: 700,
   rent: 1_800,
-  status: 'occupied',
-  tenantName: 'Leah Novak',
-  leaseEndDate: '2027-06-30',
+  status: 'vacant',
 }
 
 describe('property service', () => {
@@ -77,16 +75,23 @@ describe('property service', () => {
   it('updates units and keeps property totals in sync', async () => {
     const property = await createProperty(propertyInput)
     const unit = await createUnit(property.id, unitInput)
-    await createUnit(property.id, { ...unitInput, number: '102', status: 'vacant', tenantName: 'Ignored', leaseEndDate: '2027-01-01' })
+    await createUnit(property.id, { ...unitInput, number: '102' })
 
     let detail = await getPropertyDetail(property.id)
-    expect(detail?.property).toMatchObject({ occupiedUnits: 1, monthlyRevenue: 1_800 })
+    expect(detail?.property).toMatchObject({ occupiedUnits: 0, maintenanceUnits: 0, monthlyRevenue: 0 })
     expect(detail?.units.find((entry) => entry.number === '102')).toMatchObject({ tenantName: null, leaseEndDate: null })
 
-    await updateUnit(unit.id, { ...unitInput, status: 'maintenance', tenantName: null, leaseEndDate: null })
+    await updateUnit(unit.id, { ...unitInput, status: 'maintenance' })
     detail = await getPropertyDetail(property.id)
     expect(detail?.property).toMatchObject({ occupiedUnits: 0, maintenanceUnits: 1, monthlyRevenue: 0 })
     expect(detail?.events.map((event) => event.kind)).toEqual(['unit-updated', 'unit-added', 'unit-added', 'property-created'])
+  })
+
+  it('leaves occupancy to the Tenants module', async () => {
+    const property = await createProperty(propertyInput)
+    await expect(createUnit(property.id, { ...unitInput, status: 'occupied' })).rejects.toMatchObject({ field: 'status' })
+    const unit = await createUnit(property.id, unitInput)
+    await expect(updateUnit(unit.id, { ...unitInput, status: 'occupied' })).rejects.toMatchObject({ field: 'status' })
   })
 
   it('enforces unique unit numbers, capacity and minimum total units', async () => {

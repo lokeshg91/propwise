@@ -65,7 +65,23 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | FormField | `components/forms/form-field.tsx` | Label, required marker, hint and error with `aria-invalid` and `aria-describedby` wired automatically |
 | FormSection | `components/forms/form-section.tsx` | Card section with a title column on wide screens |
 | Textarea, RadioGroup | `components/ui/` | shadcn-style primitives matching the other inputs |
-| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge` |
+| BackLink | `components/shared/back-link.tsx` | "← Parent" link above detail and form page titles |
+| ActivityTimeline | `components/shared/activity-timeline.tsx` | Icon + title + description + time feed; optional day grouping. Items carry a Lucide icon and a tone (`primary`, `info`, `success`, `warning`, `danger`, `neutral`) |
+| Switch | `components/ui/switch.tsx` | Toggles optional form sections (emergency contact, new lease) |
+| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge`, `TenantStatusBadge`, `LeaseStatusBadge`, `RentChargeBadge` |
+
+### Lease status colours
+
+| Status | Badge | Meaning |
+| --- | --- | --- |
+| Active | success | Lease running, more than 60 days left |
+| Expiring soon | warning | Ends within 60 days |
+| Holdover | danger | End date passed, tenant hasn’t moved out; the unit stays occupied |
+| Pending move-in | info | Signed, starts in the future; the unit is reserved |
+| Move-in due | warning | Start date reached; waiting for “Mark as moved in” |
+| Expired, Terminated | neutral | Ended at term, or early / cancelled |
+
+Statuses that need action also show a tinted alert with the next step (End lease, Mark as moved in).
 
 ## Charts
 
@@ -82,6 +98,8 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 - **Messages:** errors say what to do ("Enter a 5-digit ZIP code") and appear below the field next to an icon.
 - **Required fields:** marked with a red asterisk; the asterisk is hidden from screen readers, and `aria-required` carries the meaning instead.
 - **Save buttons:** they show a spinner while saving. Edit forms keep Save disabled until something changes.
+- **Service errors:** a conflict from the data layer (duplicate email, unit already leased) is shown on the matching field.
+- **Confirmations:** actions that change occupancy (End lease, Cancel lease, Mark as moved in) use a dialog, never a browser `confirm()`. Destructive actions use the `destructive` button.
 
 ## States
 

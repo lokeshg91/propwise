@@ -2,16 +2,26 @@ import { activities } from '@/data/mock/activities'
 import { maintenanceRequests } from '@/data/mock/maintenance-requests'
 import { rentPayments } from '@/data/mock/payments'
 import { createId, type DemoDatabase, readDatabase, updateDatabase } from '@/data/store/demo-store'
+import { isCurrentLease } from '@/data/domain/lease-rules'
+import {
+  currentLeaseForUnit,
+  findProperty,
+  findUnit,
+  recordPropertyEvent,
+  refreshPropertyTotals,
+} from '@/data/services/occupancy'
 import { ServiceError } from '@/data/services/service-error'
 import { simulateLatency } from '@/data/services/simulate-latency'
 import {
   type Activity,
+  type Lease,
   type MaintenanceRequest,
   type Property,
   type PropertyEvent,
   type PropertyEventKind,
   type PropertyInput,
   type RentPayment,
+  type Tenant,
   type Unit,
   type UnitInput,
 } from '@/types'
@@ -24,6 +34,8 @@ export interface PropertyDetail {
   activities: Activity[]
   maintenanceRequests: MaintenanceRequest[]
   payments: RentPayment[]
+  /** Active and pending leases on this property's units. */
+  currentLeases: Array<Lease & { tenant: Pick<Tenant, 'id' | 'name'> }>
 }
 
 export function getProperties(): Promise<Property[]> {
@@ -45,6 +57,12 @@ export function getPropertyDetail(id: string): Promise<PropertyDetail | null> {
     activities: activities.filter((activity) => activity.propertyId === id),
     maintenanceRequests: maintenanceRequests.filter((request) => request.propertyId === id),
     payments: rentPayments.filter((payment) => payment.propertyId === id),
+    currentLeases: db.leases
+      .filter((lease) => lease.propertyId === id && isCurrentLease(lease))
+      .map((lease) => {
+        const tenant = db.tenants.find((entry) => entry.id === lease.tenantId)
+        return { ...lease, tenant: { id: lease.tenantId, name: tenant?.name ?? 'Tenant' } }
+      }),
   })
 }
 
@@ -99,15 +117,20 @@ export function createUnit(propertyId: string, input: UnitInput): Promise<Unit> 
           `${property.name} already has all ${property.totalUnits} units. Increase total units to add more.`,
         )
       }
+      if (input.status === 'occupied') {
+        throw new ServiceError('invalid', 'New units start vacant. Assign a tenant from the Tenants module.', 'status')
+      }
       assertUniqueNumber(units, input.number)
       const unit: Unit = {
         id: createId('unit'),
         propertyId,
         ...normalizeUnit(input),
+        tenantName: null,
+        leaseEndDate: null,
         updatedAt: new Date().toISOString(),
       }
       db.units.push(unit)
-      refreshTotals(db, property)
+      refreshPropertyTotals(db, propertyId)
       record(db, propertyId, 'unit-added', `Unit ${unit.number} added`, describeUnit(unit))
       return unit
     }),
@@ -117,15 +140,28 @@ export function createUnit(propertyId: string, input: UnitInput): Promise<Unit> 
 export function updateUnit(unitId: string, input: UnitInput): Promise<Unit> {
   return run(() =>
     updateDatabase((db) => {
-      const unit = db.units.find((entry) => entry.id === unitId)
-      if (!unit) throw new ServiceError('not-found', 'Unit not found.')
+      const unit = findUnit(db, unitId)
       const property = findProperty(db, unit.propertyId)
       assertUniqueNumber(
         db.units.filter((entry) => entry.propertyId === unit.propertyId && entry.id !== unitId),
         input.number,
       )
+      const lease = currentLeaseForUnit(db, unitId)
+      if (lease?.status === 'active') {
+        // Occupancy and rent of a leased unit follow its lease.
+        if (input.status !== 'occupied') {
+          throw new ServiceError('conflict', 'End the tenant’s lease before changing this unit’s occupancy.', 'status')
+        }
+        if (input.rent !== unit.rent) {
+          throw new ServiceError('conflict', 'Rent for a leased unit is set by the lease. Edit it from the tenant.', 'rent')
+        }
+      } else if (input.status === 'occupied') {
+        throw new ServiceError('invalid', 'Assign a tenant from the Tenants module to mark this unit occupied.', 'status')
+      } else if (lease?.status === 'pending' && input.status === 'maintenance') {
+        throw new ServiceError('conflict', 'This unit is reserved by a pending lease. Cancel the lease first.', 'status')
+      }
       Object.assign(unit, normalizeUnit(input), { updatedAt: new Date().toISOString() })
-      refreshTotals(db, property)
+      refreshPropertyTotals(db, property.id)
       record(db, property.id, 'unit-updated', `Unit ${unit.number} updated`, describeUnit(unit))
       return unit
     }),
@@ -141,12 +177,6 @@ function run<T>(mutation: () => T, latency?: number): Promise<T> {
   } catch (error) {
     return Promise.reject(error instanceof Error ? error : new Error(String(error)))
   }
-}
-
-function findProperty(db: DemoDatabase, id: string): Property {
-  const property = db.properties.find((entry) => entry.id === id)
-  if (!property) throw new ServiceError('not-found', 'Property not found.')
-  return property
 }
 
 function toPropertyFields(input: PropertyInput) {
@@ -168,13 +198,7 @@ function toPropertyFields(input: PropertyInput) {
 }
 
 function normalizeUnit(input: UnitInput): UnitInput {
-  const occupied = input.status === 'occupied'
-  return {
-    ...input,
-    number: input.number.trim(),
-    tenantName: occupied ? (input.tenantName?.trim() ?? null) : null,
-    leaseEndDate: occupied ? input.leaseEndDate || null : null,
-  }
+  return { ...input, number: input.number.trim() }
 }
 
 function assertUniqueNumber(units: Unit[], number: string) {
@@ -184,21 +208,11 @@ function assertUniqueNumber(units: Unit[], number: string) {
   }
 }
 
-/** Keeps a property's occupancy and revenue in sync with its units. */
-function refreshTotals(db: DemoDatabase, property: Property) {
-  const units = db.units.filter((unit) => unit.propertyId === property.id)
-  const occupied = units.filter((unit) => unit.status === 'occupied')
-  property.occupiedUnits = occupied.length
-  property.maintenanceUnits = units.filter((unit) => unit.status === 'maintenance').length
-  property.monthlyRevenue = occupied.reduce((sum, unit) => sum + unit.rent, 0)
-  property.updatedAt = new Date().toISOString()
-}
-
 function describeUnit(unit: Unit): string {
   if (unit.status === 'occupied') return `Occupied by ${unit.tenantName ?? 'a tenant'}.`
   return unit.status === 'maintenance' ? 'Marked as under maintenance.' : 'Marked as vacant and ready to lease.'
 }
 
 function record(db: DemoDatabase, propertyId: string, kind: PropertyEventKind, title: string, description: string) {
-  db.events.unshift({ id: createId('evt'), propertyId, kind, title, description, createdAt: new Date().toISOString() })
+  recordPropertyEvent(db, propertyId, kind, title, description)
 }

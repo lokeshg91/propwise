@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { LoaderCircle } from 'lucide-react'
-import { useMemo } from 'react'
+import { CalendarClock, LoaderCircle, UserPlus, UserRound } from 'lucide-react'
+import { type ReactNode, useMemo } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { FormField } from '@/components/forms/form-field'
@@ -18,13 +19,18 @@ import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createUnit, isServiceError, updateUnit } from '@/data/services'
+import { type UnitLease } from '@/features/properties/components/unit-columns'
 import { UNIT_STATUS_LABELS, UNIT_TYPE_LABELS, unitLabel, unitTypesFor } from '@/features/properties/lib/property-meta'
 import { createUnitSchema, toUnitInput, type UnitFormDraft, type UnitFormValues } from '@/features/properties/lib/unit-schema'
 import { toNullableNumber } from '@/lib/form-schema'
+import { formatShortDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { type Property, UNIT_STATUSES, type Unit } from '@/types'
+import { type Property, type Unit, type UnitStatus } from '@/types'
 
-export type UnitDialogState = { mode: 'create' } | { mode: 'edit'; unit: Unit } | null
+export type UnitDialogState = { mode: 'create' } | { mode: 'edit'; unit: Unit; lease: UnitLease | null } | null
+
+/** Statuses set here; “occupied” only comes from an active lease in the Tenants module. */
+const EDITABLE_STATUSES = ['vacant', 'maintenance'] as const satisfies readonly UnitStatus[]
 
 interface UnitFormDialogProps {
   property: Property
@@ -44,6 +50,7 @@ export function UnitFormDialog({ property, state, onOpenChange, onSaved }: UnitF
             key={state.mode === 'edit' ? state.unit.id : 'new'}
             property={property}
             unit={state.mode === 'edit' ? state.unit : null}
+            lease={state.mode === 'edit' ? state.lease : null}
             onCancel={() => onOpenChange(false)}
             onSaved={onSaved}
           />
@@ -62,8 +69,6 @@ function defaultsFor(property: Property, unit: Unit | null): UnitFormDraft {
       areaSqft: unit.areaSqft,
       rent: unit.rent,
       status: unit.status,
-      tenantName: unit.tenantName ?? '',
-      leaseEndDate: unit.leaseEndDate ?? '',
     }
   }
   return {
@@ -73,19 +78,19 @@ function defaultsFor(property: Property, unit: Unit | null): UnitFormDraft {
     areaSqft: null,
     rent: null,
     status: 'vacant',
-    tenantName: '',
-    leaseEndDate: '',
   }
 }
 
 function UnitForm({
   property,
   unit,
+  lease,
   onCancel,
   onSaved,
 }: {
   property: Property
   unit: Unit | null
+  lease: UnitLease | null
   onCancel: () => void
   onSaved: () => void
 }) {
@@ -103,6 +108,8 @@ function UnitForm({
   })
   const status = useWatch({ control, name: 'status' })
   const occupied = status === 'occupied'
+  const leased = lease?.status === 'active'
+  const reserved = lease?.status === 'pending'
   const prefix = property.type === 'residential' ? 'Unit' : 'Suite'
 
   const submit = handleSubmit(async (values) => {
@@ -113,8 +120,9 @@ function UnitForm({
       })
       onSaved()
     } catch (error) {
-      if (isServiceError(error) && error.field === 'number') {
-        setError('number', { message: error.message }, { shouldFocus: true })
+      const field = isServiceError(error) ? error.field : undefined
+      if (field === 'number' || field === 'rent' || field === 'status') {
+        setError(field, { message: error instanceof Error ? error.message : '' }, { shouldFocus: true })
       } else {
         setError('root', { message: error instanceof Error ? error.message : 'Could not save the unit.' })
       }
@@ -126,7 +134,7 @@ function UnitForm({
       <DialogHeader>
         <DialogTitle>{unit ? `Edit ${unitLabel(property.type, unit.number)}` : 'Add unit'}</DialogTitle>
         <DialogDescription>
-          {unit ? 'Update the unit details and occupancy.' : `Add a ${prefix.toLowerCase()} to ${property.name}.`}
+          {unit ? 'Update the unit details and availability.' : `Add a ${prefix.toLowerCase()} to ${property.name}.`}
         </DialogDescription>
       </DialogHeader>
 
@@ -174,7 +182,7 @@ function UnitForm({
           label={occupied ? 'Monthly rent' : 'Asking rent'}
           required
           error={errors.rent?.message}
-          hint={occupied ? 'Rent in the current lease' : 'Advertised rent while available'}
+          hint={leased ? 'Set by the current lease. Change it from the tenant’s lease.' : 'Advertised rent while available'}
           className="sm:col-span-2"
         >
           {(field) => (
@@ -189,50 +197,79 @@ function UnitForm({
                 inputMode="decimal"
                 min={0}
                 step="any"
-                className="pl-7"
+                readOnly={leased}
+                aria-readonly={leased || undefined}
+                className="pl-7 read-only:bg-muted/50 read-only:text-muted-foreground"
               />
             </div>
           )}
         </FormField>
       </div>
 
-      <Controller
-        control={control}
-        name="status"
-        render={({ field }) => (
-          <fieldset>
-            <legend className="mb-2 text-label text-foreground">Occupancy</legend>
-            <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Occupancy" className="grid gap-2 sm:grid-cols-3">
-              {UNIT_STATUSES.map((value) => {
-                const id = `unit-status-${value}`
-                return (
-                  <label
-                    key={value}
-                    htmlFor={id}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-muted/50',
-                      field.value === value && 'border-primary bg-accent/50 ring-1 ring-primary',
-                    )}
-                  >
-                    <RadioGroupItem id={id} value={value} />
-                    {UNIT_STATUS_LABELS[value]}
-                  </label>
-                )
-              })}
-            </RadioGroup>
-          </fieldset>
-        )}
-      />
+      {leased && lease ? (
+        <LeasePanel icon={UserRound} title="Occupied" lease={lease}>
+          Lease ends {formatShortDate(lease.endDate)}, {lease.endDate.slice(0, 4)}. To vacate the unit, end the lease from the tenant’s profile.
+        </LeasePanel>
+      ) : (
+        <Controller
+          control={control}
+          name="status"
+          render={({ field, fieldState }) => (
+            <fieldset aria-describedby={fieldState.error ? 'unit-status-error' : undefined}>
+              <legend className="mb-2 text-label text-foreground">Availability</legend>
+              <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Availability" className="grid gap-2 sm:grid-cols-2">
+                {EDITABLE_STATUSES.map((value) => {
+                  const id = `unit-status-${value}`
+                  const disabled = value === 'maintenance' && reserved
+                  return (
+                    <label
+                      key={value}
+                      htmlFor={id}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-muted/50',
+                        field.value === value && 'border-primary bg-accent/50 ring-1 ring-primary',
+                        disabled && 'cursor-not-allowed opacity-60 hover:bg-card',
+                      )}
+                    >
+                      <RadioGroupItem id={id} value={value} disabled={disabled} />
+                      {UNIT_STATUS_LABELS[value]}
+                    </label>
+                  )
+                })}
+              </RadioGroup>
+              {fieldState.error ? (
+                <p id="unit-status-error" className="mt-1.5 text-caption text-danger">
+                  {fieldState.error.message}
+                </p>
+              ) : null}
+            </fieldset>
+          )}
+        />
+      )}
 
-      {occupied ? (
-        <div className="grid gap-4 rounded-lg border border-border bg-muted/40 p-4 sm:grid-cols-2">
-          <FormField label="Tenant name" required error={errors.tenantName?.message}>
-            {(field) => <Input {...field} {...register('tenantName')} placeholder={property.type === 'residential' ? 'e.g. Leah Novak' : 'e.g. Kestrel Labs'} />}
-          </FormField>
-          <FormField label="Lease end date" error={errors.leaseEndDate?.message} hint="Optional">
-            {(field) => <Input {...field} {...register('leaseEndDate')} type="date" />}
-          </FormField>
-        </div>
+      {reserved && lease ? (
+        <LeasePanel icon={CalendarClock} title="Reserved" lease={lease}>
+          Pending lease, moving in {formatShortDate(lease.startDate)}, {lease.startDate.slice(0, 4)}.
+        </LeasePanel>
+      ) : null}
+
+      {!lease && !occupied ? (
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-caption text-muted-foreground">
+          <UserPlus className="size-4 shrink-0" aria-hidden="true" />
+          {unit && status === 'vacant' ? (
+            <>
+              Ready to lease?
+              <Link
+                to={`/tenants/new?propertyId=${property.id}&unitId=${unit.id}`}
+                className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Assign a tenant
+              </Link>
+            </>
+          ) : (
+            'Tenants and occupancy are managed in the Tenants module.'
+          )}
+        </p>
       ) : null}
 
       <DialogFooter>
@@ -245,5 +282,37 @@ function UnitForm({
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+function LeasePanel({
+  icon: Icon,
+  title,
+  lease,
+  children,
+}: {
+  icon: typeof UserRound
+  title: string
+  lease: UnitLease
+  children: ReactNode
+}) {
+  return (
+    <div className="flex gap-3 rounded-lg border border-border bg-muted/40 p-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/15">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 text-caption text-muted-foreground">
+        <p className="text-body font-medium text-foreground">
+          {title} by{' '}
+          <Link
+            to={`/tenants/${lease.tenant.id}`}
+            className="rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {lease.tenant.name}
+          </Link>
+        </p>
+        <p className="mt-0.5">{children}</p>
+      </div>
+    </div>
   )
 }

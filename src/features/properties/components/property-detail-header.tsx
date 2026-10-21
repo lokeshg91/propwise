@@ -1,8 +1,8 @@
 import { MapPin, Pencil, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { BackLink } from '@/components/shared/back-link'
 import { Button } from '@/components/ui/button'
-import { BackLink } from '@/features/properties/components/back-link'
 import { PropertyStatusBadge, PropertyTypeLabel } from '@/features/properties/components/property-badges'
 import { formatAddress } from '@/features/properties/lib/property-meta'
 import { type Property } from '@/types'

@@ -3,13 +3,20 @@ import { Pencil } from 'lucide-react'
 import { IconButton } from '@/components/shared/icon-button'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { UnitStatusBadge } from '@/features/properties/components/unit-status-badge'
+import { UnitTenant } from '@/features/properties/components/unit-tenant'
 import { UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber, formatShortDate } from '@/lib/format'
+import { formatCurrency, formatNumber } from '@/lib/format'
+import { type PropertyDetail } from '@/data/services'
 import { type Unit } from '@/types'
+
+/** The active or pending lease holding a unit, with its tenant. */
+export type UnitLease = PropertyDetail['currentLeases'][number]
 
 export interface UnitRow extends Unit {
   /** Display label, e.g. "Unit 204" or "Suite 310". */
   label: string
+  /** Active lease (occupied) or pending lease (reserved), if any. */
+  lease: UnitLease | null
 }
 
 const column = createDataTableColumnHelper<UnitRow>()
@@ -54,22 +61,11 @@ export function createUnitColumns(onEdit: (unit: Unit) => void) {
       sortFn: 'text',
       cell: (info) => <UnitStatusBadge status={info.getValue()} />,
     }),
-    column.accessor((row) => row.tenantName ?? '', {
+    column.accessor((row) => row.lease?.tenant.name ?? row.tenantName ?? '', {
       id: 'tenant',
       header: 'Tenant',
       sortFn: 'text',
-      cell: (info) => {
-        const unit = info.row.original
-        if (!unit.tenantName) return <span className="text-muted-foreground">—</span>
-        return (
-          <span className="block">
-            <span className="block text-foreground">{unit.tenantName}</span>
-            {unit.leaseEndDate ? (
-              <span className="block text-caption text-muted-foreground">Lease ends {formatShortDate(unit.leaseEndDate)}, {unit.leaseEndDate.slice(0, 4)}</span>
-            ) : null}
-          </span>
-        )
-      },
+      cell: (info) => <UnitTenant row={info.row.original} />,
     }),
     column.display({
       id: 'actions',

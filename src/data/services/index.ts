@@ -11,4 +11,18 @@ export {
   updateUnit,
 } from './property-service'
 export { isServiceError, ServiceError } from './service-error'
+export {
+  activateLease,
+  type AssignableProperty,
+  cancelLease,
+  createTenant,
+  endLease,
+  getAssignableUnits,
+  getTenantDetail,
+  getTenants,
+  MAX_DEPOSIT_MULTIPLE,
+  type TenantDetail,
+  type TenantListItem,
+  updateTenant,
+} from './tenant-service'
 export { getCurrentUser } from './user-service'

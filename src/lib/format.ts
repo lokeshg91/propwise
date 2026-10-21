@@ -106,3 +106,8 @@ export function formatDueLabel(isoDate: string, now: Date = new Date()): string 
 export function formatTime(isoDate: string): string {
   return new Date(isoDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
+
+/** "2026-10-24" → "Oct 24, 2026". */
+export function formatDate(isoDate: string): string {
+  return parseCalendarDate(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}

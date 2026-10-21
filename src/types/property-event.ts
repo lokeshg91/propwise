@@ -1,4 +1,11 @@
-export const PROPERTY_EVENT_KINDS = ['property-created', 'property-updated', 'unit-added', 'unit-updated'] as const
+export const PROPERTY_EVENT_KINDS = [
+  'property-created',
+  'property-updated',
+  'unit-added',
+  'unit-updated',
+  'unit-leased',
+  'unit-vacated',
+] as const
 export type PropertyEventKind = (typeof PROPERTY_EVENT_KINDS)[number]
 
 /** Change recorded when a property or its units are edited in the app. */

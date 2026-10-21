@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
+import { BackLink } from '@/components/shared/back-link'
 import { PageContainer } from '@/components/shared/page-container'
 import { PageHeader } from '@/components/shared/page-header'
 import { createProperty } from '@/data/services'
-import { BackLink } from '@/features/properties/components/back-link'
 import { PropertyForm } from '@/features/properties/components/property-form'
 import { EMPTY_PROPERTY_VALUES } from '@/features/properties/lib/property-schema'
 

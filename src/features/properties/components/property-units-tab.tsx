@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { UnitCard } from '@/features/properties/components/unit-card'
-import { createUnitColumns, type UnitRow } from '@/features/properties/components/unit-columns'
+import { createUnitColumns, type UnitLease, type UnitRow } from '@/features/properties/components/unit-columns'
 import { type UnitStats } from '@/features/properties/lib/property-detail'
 import { UNIT_TYPE_LABELS, unitLabel, unitTypesFor } from '@/features/properties/lib/property-meta'
 import { type Property, type Unit, type UnitStatus, type UnitType } from '@/types'
@@ -19,6 +19,8 @@ type StatusFilter = UnitStatus | 'all'
 interface PropertyUnitsTabProps {
   property: Property
   units: Unit[]
+  /** Active and pending leases at the property. */
+  leases: UnitLease[]
   stats: UnitStats
   canAddUnit: boolean
   onAddUnit: () => void
@@ -27,7 +29,7 @@ interface PropertyUnitsTabProps {
 
 const SEARCHABLE = ['unit', 'tenant'] as const
 
-export function PropertyUnitsTab({ property, units, stats, canAddUnit, onAddUnit, onEditUnit }: PropertyUnitsTabProps) {
+export function PropertyUnitsTab({ property, units, leases, stats, canAddUnit, onAddUnit, onEditUnit }: PropertyUnitsTabProps) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [type, setType] = useState<UnitType | 'all'>('all')
@@ -36,10 +38,12 @@ export function PropertyUnitsTab({ property, units, stats, canAddUnit, onAddUnit
     () =>
       units
         .filter((unit) => (status === 'all' || unit.status === status) && (type === 'all' || unit.type === type))
-        .map((unit) => {
-          return { ...unit, label: unitLabel(property.type, unit.number) }
-        }),
-    [units, status, type, property.type],
+        .map((unit) => ({
+          ...unit,
+          label: unitLabel(property.type, unit.number),
+          lease: leases.find((lease) => lease.unitId === unit.id) ?? null,
+        })),
+    [units, leases, status, type, property.type],
   )
   const columns = useMemo(() => createUnitColumns(onEditUnit), [onEditUnit])
   const hasFilters = search !== '' || status !== 'all' || type !== 'all'

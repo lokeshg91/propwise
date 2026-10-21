@@ -2,9 +2,10 @@ import { Pencil } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { type UnitRow } from '@/features/properties/components/unit-columns'
+import { UnitTenant } from '@/features/properties/components/unit-tenant'
 import { UnitStatusBadge } from '@/features/properties/components/unit-status-badge'
 import { UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber, formatShortDate } from '@/lib/format'
+import { formatCurrency, formatNumber } from '@/lib/format'
 
 export function UnitCard({ row, onEdit }: { row: UnitRow; onEdit: () => void }) {
   return (
@@ -23,16 +24,9 @@ export function UnitCard({ row, onEdit }: { row: UnitRow; onEdit: () => void }) 
         <span className="font-semibold text-foreground tabular-nums">{formatCurrency(row.rent)}/mo</span>
       </p>
       <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
-        <p className="min-w-0 truncate text-caption text-muted-foreground">
-          {row.tenantName ? (
-            <>
-              <span className="text-foreground">{row.tenantName}</span>
-              {row.leaseEndDate ? ` · until ${formatShortDate(row.leaseEndDate)}, ${row.leaseEndDate.slice(0, 4)}` : ''}
-            </>
-          ) : (
-            'No tenant'
-          )}
-        </p>
+        <div className="min-w-0 text-caption text-muted-foreground">
+          {row.lease || row.tenantName ? <UnitTenant row={row} /> : 'No tenant'}
+        </div>
         <Button variant="ghost" size="sm" onClick={onEdit} aria-label={`Edit ${row.label}`}>
           <Pencil data-icon="inline-start" />
           Edit
