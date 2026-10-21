@@ -9,6 +9,7 @@ import { NotFoundPage } from '@/app/routes/not-found-page'
 import { skipSearchParamRevalidation } from '@/app/routes/revalidation'
 import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
 import { propertyHandles } from '@/features/properties/properties.handles'
+import { maintenanceHandles } from '@/features/maintenance/maintenance.handles'
 import { tenantHandles } from '@/features/tenants/tenants.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
@@ -154,10 +155,56 @@ export const routes: RouteObject[] = [
           {
             path: 'maintenance',
             handle: navHandle('/maintenance'),
-            lazy: async () => ({
-              Component: (await import('@/features/maintenance/pages/maintenance-page'))
-                .MaintenancePage,
-            }),
+            children: [
+              {
+                index: true,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ MaintenancePage }, { maintenanceLoader }] = await Promise.all([
+                    import('@/features/maintenance/pages/maintenance-page'),
+                    import('@/features/maintenance/maintenance.loaders'),
+                  ])
+                  return { Component: MaintenancePage, loader: maintenanceLoader }
+                },
+              },
+              {
+                path: 'new',
+                handle: maintenanceHandles.create,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ RequestCreatePage }, { requestCreateLoader }] = await Promise.all([
+                    import('@/features/maintenance/pages/request-create-page'),
+                    import('@/features/maintenance/maintenance.loaders'),
+                  ])
+                  return { Component: RequestCreatePage, loader: requestCreateLoader }
+                },
+              },
+              {
+                path: ':requestId',
+                handle: maintenanceHandles.detail,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ RequestDetailsPage }, { requestDetailLoader }, { RequestRouteError }] = await Promise.all([
+                    import('@/features/maintenance/pages/request-details-page'),
+                    import('@/features/maintenance/maintenance.loaders'),
+                    import('@/features/maintenance/components/request-route-error'),
+                  ])
+                  return { Component: RequestDetailsPage, loader: requestDetailLoader, ErrorBoundary: RequestRouteError }
+                },
+              },
+              {
+                path: ':requestId/edit',
+                handle: maintenanceHandles.edit,
+                lazy: async () => {
+                  const [{ RequestEditPage }, { requestEditLoader }, { RequestRouteError }] = await Promise.all([
+                    import('@/features/maintenance/pages/request-edit-page'),
+                    import('@/features/maintenance/maintenance.loaders'),
+                    import('@/features/maintenance/components/request-route-error'),
+                  ])
+                  return { Component: RequestEditPage, loader: requestEditLoader, ErrorBoundary: RequestRouteError }
+                },
+              },
+            ],
           },
           {
             path: 'vendors',

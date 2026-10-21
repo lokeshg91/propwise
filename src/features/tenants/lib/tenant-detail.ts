@@ -7,10 +7,12 @@ import {
   MoveRight,
   UserPen,
   UserPlus,
+  Wrench,
 } from 'lucide-react'
 
 import { type ActivityItem, type ActivityTone } from '@/components/shared/activity-timeline'
-import { type TenantDetail } from '@/data/services'
+import { type RequestListItem, type TenantDetail } from '@/data/services'
+import { locationLabel } from '@/features/maintenance/lib/request-list'
 import { type RentCharge, type TenantEventKind } from '@/types'
 
 const EVENT_STYLES: Record<TenantEventKind, { icon: LucideIcon; tone: ActivityTone }> = {
@@ -77,4 +79,16 @@ export function summarizeLedger(ledger: RentCharge[]) {
     overdueCount: overdue.length,
     next: [...ledger].reverse().find((charge) => charge.status === 'scheduled' || charge.status === 'pending') ?? null,
   }
+}
+
+/** "Reported MR-2062" entries for maintenance requests the tenant raised. */
+export function maintenanceTimelineItems(items: RequestListItem[]): ActivityItem[] {
+  return items.map((item) => ({
+    id: `${item.request.id}-reported`,
+    title: `Reported ${item.request.id}`,
+    description: `${item.request.title} — ${locationLabel(item)}.`,
+    createdAt: item.request.createdAt,
+    icon: Wrench,
+    tone: 'warning',
+  }))
 }

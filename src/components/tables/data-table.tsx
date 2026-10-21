@@ -125,9 +125,9 @@ export function DataTable<TData extends RowData>({
             </div>
           ) : null}
           {rows.length > 0 ? (
-            <ul className="grid gap-2 md:grid-cols-2" aria-label={caption}>
+            <ul className="grid grid-cols-1 gap-2 md:grid-cols-2" aria-label={caption}>
               {rows.map((row) => (
-                <li key={row.id} className="rounded-lg border border-border p-3.5">
+                <li key={row.id} className="min-w-0 rounded-lg border border-border p-3.5">
                   {renderMobileRow(row.original)}
                 </li>
               ))}

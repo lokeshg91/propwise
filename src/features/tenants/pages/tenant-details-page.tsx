@@ -11,7 +11,7 @@ import { TenantDetailHeader } from '@/features/tenants/components/tenant-detail-
 import { TenantLeaseTab } from '@/features/tenants/components/tenant-lease-tab'
 import { TenantOverviewTab } from '@/features/tenants/components/tenant-overview-tab'
 import { TenantPaymentsTab } from '@/features/tenants/components/tenant-payments-tab'
-import { buildTenantTimeline } from '@/features/tenants/lib/tenant-detail'
+import { buildTenantTimeline, maintenanceTimelineItems } from '@/features/tenants/lib/tenant-detail'
 import { type tenantDetailLoader } from '@/features/tenants/tenants.loaders'
 
 const TABS = ['overview', 'lease', 'payments', 'activity'] as const
@@ -28,7 +28,10 @@ export function TenantDetailsPage() {
   const [action, setAction] = useState<LeaseAction | null>(null)
 
   const leaseStatus = lease ? getLeaseDisplayStatus(lease) : null
-  const timeline = useMemo(() => buildTenantTimeline(detail), [detail])
+  const timeline = useMemo(
+    () => [...buildTenantTimeline(detail), ...maintenanceTimelineItems(detail.maintenance)].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [detail],
+  )
   const record = detail.leases.find((entry) => entry.id === lease?.id)
 
   const setTab = useCallback(
@@ -72,6 +75,7 @@ export function TenantDetailsPage() {
         <TabsContent value="overview">
           <TenantOverviewTab
             detail={detail}
+            maintenance={detail.maintenance}
             leaseStatus={leaseStatus}
             timeline={timeline}
             onShowLease={() => setTab('lease')}

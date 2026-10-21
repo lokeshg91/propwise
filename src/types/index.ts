@@ -34,3 +34,26 @@ export { LEASE_DISPLAY_STATUSES, LEASE_END_REASONS, LEASE_STATUSES } from './lea
 export type { EmergencyContact, MailingAddress, Tenant, TenantEvent, TenantEventKind, TenantKind, TenantStatus } from './tenant'
 export { TENANT_EVENT_KINDS, TENANT_KINDS, TENANT_STATUSES } from './tenant'
 export type { LeaseAssignmentInput, TenantInput } from './tenant-input'
+export type {
+  HoldReason,
+  MaintenanceEvent,
+  MaintenanceEventKind,
+  RequestCategory,
+  RequestSource,
+  RequestStatus,
+  ServiceRequest,
+  ServiceRequestInput,
+  WorkOrder,
+  WorkOrderInput,
+  WorkOrderStatus,
+} from './service-request'
+export {
+  ACTIVE_REQUEST_STATUSES,
+  HOLD_REASONS,
+  MAINTENANCE_EVENT_KINDS,
+  REQUEST_CATEGORIES,
+  REQUEST_SOURCES,
+  REQUEST_STATUSES,
+  WORK_ORDER_STATUSES,
+} from './service-request'
+export type { Vendor } from './vendor'

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CalendarClock, LoaderCircle, UserPlus, UserRound } from 'lucide-react'
+import { CalendarClock, LoaderCircle, UserPlus, UserRound, Wrench } from 'lucide-react'
 import { type ReactNode, useMemo } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { Link } from 'react-router'
@@ -269,6 +269,19 @@ function UnitForm({
           ) : (
             'Tenants and occupancy are managed in the Tenants module.'
           )}
+        </p>
+      ) : null}
+
+      {unit ? (
+        <p className="flex items-center gap-1.5 text-caption text-muted-foreground">
+          <Wrench className="size-4 shrink-0" aria-hidden="true" />
+          Something needs fixing?
+          <Link
+            to={`/maintenance/new?propertyId=${property.id}&unitId=${unit.id}`}
+            className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            Report an issue
+          </Link>
         </p>
       ) : null}
 

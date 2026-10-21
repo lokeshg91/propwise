@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { PageContainer } from '@/components/shared/page-container'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { isActiveRequest } from '@/data/domain/maintenance-rules'
+import { RequestsTableCard } from '@/features/maintenance/components/requests-table-card'
 import { PropertyDetailHeader } from '@/features/properties/components/property-detail-header'
 import { PropertyKpis } from '@/features/properties/components/property-kpis'
 import { PropertyOverviewTab } from '@/features/properties/components/property-overview-tab'
@@ -15,7 +17,7 @@ import { buildPropertyTimeline, getUnitStats } from '@/features/properties/lib/p
 import { type propertyDetailLoader } from '@/features/properties/properties.loaders'
 import { type Unit } from '@/types'
 
-const TABS = ['overview', 'units', 'activity'] as const
+const TABS = ['overview', 'units', 'activity', 'maintenance'] as const
 type DetailTab = (typeof TABS)[number]
 const isTab = (value: string | null): value is DetailTab => (TABS as readonly (string | null)[]).includes(value)
 
@@ -32,6 +34,7 @@ export function PropertyDetailsPage() {
   const stats = useMemo(() => getUnitStats(units, property.totalUnits), [units, property.totalUnits])
   const timeline = useMemo(() => buildPropertyTimeline(detail), [detail])
   const canAddUnit = units.length < property.totalUnits
+  const openRequests = detail.maintenanceRequests.filter((item) => isActiveRequest(item.request)).length
 
   const setTab = useCallback(
     (next: string) => {
@@ -87,6 +90,12 @@ export function PropertyDetailsPage() {
             <TabsTrigger value="activity" className="px-1">
               Activity
             </TabsTrigger>
+            <TabsTrigger value="maintenance" className="px-1">
+              Maintenance
+              {openRequests > 0 ? (
+                <span className="rounded-full bg-muted px-1.5 text-caption text-muted-foreground tabular-nums">{openRequests}</span>
+              ) : null}
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -120,6 +129,13 @@ export function PropertyDetailsPage() {
               <PropertyTimeline items={timeline} grouped />
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="maintenance">
+          <RequestsTableCard
+            items={detail.maintenanceRequests}
+            description={`Requests and work orders at ${property.name}`}
+            reportHref={`/maintenance/new?propertyId=${property.id}`}
+          />
         </TabsContent>
       </Tabs>
 

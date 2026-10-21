@@ -68,7 +68,11 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | BackLink | `components/shared/back-link.tsx` | "← Parent" link above detail and form page titles |
 | ActivityTimeline | `components/shared/activity-timeline.tsx` | Icon + title + description + time feed; optional day grouping. Items carry a Lucide icon and a tone (`primary`, `info`, `success`, `warning`, `danger`, `neutral`) |
 | Switch | `components/ui/switch.tsx` | Toggles optional form sections (emergency contact, new lease) |
-| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge`, `TenantStatusBadge`, `LeaseStatusBadge`, `RentChargeBadge` |
+| DetailList | `components/shared/detail-list.tsx` | Label/value pairs in a responsive grid |
+| StatusAlert | `components/shared/status-alert.tsx` | Tinted notice (`danger`, `warning`, `info`, `success`) with an icon, title, next step and optional actions |
+| RouteErrorState | `components/shared/route-error-state.tsx` | 404 / load-error screen for a record, with a back button |
+| NavigationProgress | `components/shared/navigation-progress.tsx` | Thin top bar while the next page's data loads; respects reduced motion |
+| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge`, `TenantStatusBadge`, `LeaseStatusBadge`, `RentChargeBadge`, `RequestStatusBadge`, `WorkOrderStatusBadge` |
 
 ### Lease status colours
 
@@ -82,6 +86,19 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | Expired, Terminated | neutral | Ended at term, or early / cancelled |
 
 Statuses that need action also show a tinted alert with the next step (End lease, Mark as moved in).
+
+### Maintenance status colours
+
+| Status | Badge | Notes |
+| --- | --- | --- |
+| Open | brand | Waiting for a vendor |
+| Scheduled | info | Vendor assigned |
+| In progress | warning | Work started |
+| On hold | neutral | Reason shown in a warning alert |
+| Completed | success | Reopen possible for 30 days |
+| Cancelled | neutral | Final |
+
+Priority badges reuse the Dashboard's `MaintenancePriorityBadge` (urgent danger, high warning, medium info, low neutral). The due line under a status is red when overdue and amber when due soon, and always says so in words.
 
 ## Charts
 
@@ -99,7 +116,8 @@ Statuses that need action also show a tinted alert with the next step (End lease
 - **Required fields:** marked with a red asterisk; the asterisk is hidden from screen readers, and `aria-required` carries the meaning instead.
 - **Save buttons:** they show a spinner while saving. Edit forms keep Save disabled until something changes.
 - **Service errors:** a conflict from the data layer (duplicate email, unit already leased) is shown on the matching field.
-- **Confirmations:** actions that change occupancy (End lease, Cancel lease, Mark as moved in) use a dialog, never a browser `confirm()`. Destructive actions use the `destructive` button.
+- **Confirmations:** actions that change occupancy or a request's status (End lease, Mark as moved in, Complete, Cancel, Reopen…) use a dialog, never a browser `confirm()`. Destructive actions use the `destructive` button.
+- **Explicit answers:** when a choice changes another record (returning a unit to Vacant), the dialog asks a required yes/no question with no default.
 
 ## States
 

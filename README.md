@@ -2,7 +2,7 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.5.0 — design system, application shell, dashboard overview, the Properties module and the Tenants module. Maintenance, vendors and finance modules are added in later phases.
+> **Status:** v0.6.0 — design system, application shell, dashboard overview, and the Properties, Tenants and Maintenance modules. Vendor management and finance modules are added in later phases.
 
 Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payments, email or SMS integrations. Connect it to your own APIs through the service layer in `src/data/services/`.
 
@@ -123,6 +123,12 @@ propwise/
   - A details page with Overview, Units and Activity tabs.
   - Add and Edit property forms (React Hook Form + Zod) with inline errors, an error summary, focus on the first error and success toasts.
   - Units management: search, occupancy and type filters, and an add/edit dialog with conditional validation.
+- **Maintenance module:**
+  - A listing with metrics (open, overdue, scheduled or in progress, completed in 30 days with average resolution time), search by ID, issue, property, vendor or tenant, status, priority, category, property and overdue filters kept in the URL, sorting and cards on tablet and mobile.
+  - A request page with status and priority, alerts for overdue, on-hold, completed and cancelled requests, the current work order and earlier work orders, the resolution target and the activity history.
+  - New and Edit request forms: issue, category and priority (with the resolution target), unit or common area, reporter (tenant, staff or inspection), access notes, an optional “take the vacant unit offline” switch and an optional vendor assignment.
+  - Action dialogs for Assign, Reassign, Reschedule, Start, Hold, Resume, Complete, Cancel and Reopen. Completing or cancelling asks explicitly whether a unit under maintenance should return to Vacant.
+  - A Maintenance tab on property details, “Report an issue” in the unit dialog, and a Maintenance requests card and activity entries on tenant profiles.
 - **Tenants module:**
   - A listing with portfolio metrics (active tenants, upcoming move-ins, expiring and holdover leases, rent roll), search by name, email, phone or property, tenant-status and lease-status filters kept in the URL, sorting, pagination and cards on tablet and mobile.
   - A details page with Overview, Lease, Payments and Activity tabs.
@@ -148,7 +154,12 @@ propwise/
 | `/tenants/new` | Add tenant (`?propertyId=&unitId=` preselects a unit) |
 | `/tenants/:tenantId` | Tenant details (`?tab=overview\|lease\|payments\|activity`) |
 | `/tenants/:tenantId/edit` | Edit tenant and lease |
-| `/maintenance`, `/vendors`, `/finance`, `/reports` | Main modules (placeholders) |
+| `/maintenance` | Maintenance listing (`?q=`, `?status=active\|completed\|cancelled\|all`, `?priority=`, `?category=`, `?property=`, `?overdue=1`) |
+| `/maintenance/new` | New request (`?propertyId=&unitId=&tenantId=` prefills the location and reporter) |
+| `/maintenance/:requestId` | Request details, work orders and activity |
+| `/maintenance/:requestId/edit` | Edit request details |
+| `/properties/:propertyId?tab=maintenance` | A property's requests |
+| `/vendors`, `/finance`, `/reports` | Main modules (placeholders) |
 | `/staff`, `/notifications`, `/settings` | Management modules |
 | `*` | Not found |
 
@@ -162,8 +173,8 @@ The template ships with realistic, fictional sample data. Nothing is sent to a s
 | Mock data | `src/data/mock/` | Sample records. Dates are relative to today, so the demo always looks current |
 | Services | `src/data/services/` | Async functions such as `getDashboardData()`. Replace their bodies with API calls |
 | Selectors | `src/features/dashboard/lib/` | Pure functions that filter and aggregate data for each widget (unit-tested) |
-| Domain rules | `src/data/domain/` | Date helpers and lease rules (`getLeaseDisplayStatus`, `getTenantStatus`) shared by services and UI |
-| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases and change history created or edited in the app, saved to `localStorage` (`propwise-demo-data`, schema v2). `resetDemoData()` restores the sample data |
+| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`) and maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`) shared by services and UI |
+| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders and change history created or edited in the app, saved to `localStorage` (`propwise-demo-data`, schema v3). `resetDemoData()` restores the sample data |
 
 Route loaders call services, and pages derive what they display through selectors. To connect a real backend, change the service functions only; the components stay the same.
 
@@ -185,9 +196,23 @@ Route loaders call services, and pages derive what they display through selector
 - **Tenant status:** Active if they have an active lease, Pending if only a pending one, otherwise Past. A past tenant can start a new lease from Edit tenant.
 - **Payment history:** generated from the lease terms with a hash of the lease and month, so amounts and statuses don’t change on refresh. It is labelled “Demo data”. Replace `generateRentLedger` with your payments API.
 
+### Maintenance rules
+
+- **Lifecycle:** Open → Scheduled (vendor assigned) → In progress → Completed, with On hold and Resume from Scheduled or In progress. Cancel is allowed from any active status and is **final**: a cancelled request can't be reopened or edited. A completed request can be reopened within **30 days**. One table (`TRANSITIONS` in `maintenance-rules.ts`) drives both the buttons shown and the service checks, so the UI can't skip a rule.
+- **Resolution targets:** urgent 24 hours, high 3 days, medium 7 days, low 14 days (`SLA_HOURS`). Overdue and due-soon are derived, never stored.
+- **Work orders:** at most one active (scheduled or in progress) work order per request. Reassigning cancels the current one, which stays in the history, and records the change in the request activity. Completed work orders keep their final cost and completion date. Costs are plain numbers: Propwise doesn't create invoices or process payments.
+- **Vendors:** inactive vendors can't take new work orders but still appear on their past work orders. Vendor management screens come with the Vendors module.
+- **Unit status protection:** only a vacant unit with no active or pending lease can be taken offline (Under maintenance), and only when you switch it on. Occupied and reserved units are never changed by maintenance. Completing or cancelling a request for a unit under maintenance asks whether it should return to Vacant; answering “No” keeps its status. A unit isn't returned while another open request still needs it offline.
+- **Dashboard:** it keeps its fixed sample snapshot, so its maintenance figures differ from the Maintenance module.
+
 ### Storage migration
 
-Data saved by v0.4 (schema v1: properties, units and history) is upgraded automatically on first load. Everything is kept, and each occupied unit gets a tenant and active lease built from its stored tenant name, rent and lease end. Migrated records use ids derived from their unit (`ten_u_<unitId>`), so running the migration again never creates duplicates. The upgraded data is saved immediately.
+Saved data is upgraded automatically on first load, one step at a time, and every step only adds records:
+
+- **v1 → v2 (from v0.4):** each occupied unit gets a tenant and active lease built from its stored tenant name, rent and lease end. Ids derive from the unit (`ten_u_<unitId>`).
+- **v2 → v3 (from v0.5):** vendors (ids derived from their names), the 17 original maintenance requests with their original ids (MR-2045 to MR-2061), and generated demo requests linked to existing units and tenants (MR-1001 to MR-1060). New requests continue from MR-2062.
+
+Because every id is fixed, running the migration again never creates duplicates. The upgraded data is saved immediately. If an upgrade fails, the stored data is left untouched and the app runs on sample data without saving for that session; the upgrade is retried on the next load.
 
 ## Theming
 

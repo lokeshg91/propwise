@@ -41,3 +41,13 @@ export function monthsBetween(from: string, to: string): number {
   const b = parseIsoDate(to)
   return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
 }
+
+/** Adds hours to an ISO timestamp. */
+export function addHours(isoTimestamp: string, hours: number): string {
+  return new Date(new Date(isoTimestamp).getTime() + hours * 3_600_000).toISOString()
+}
+
+/** Whole hours from one ISO timestamp to another (negative when `to` is earlier). */
+export function hoursBetween(from: string, to: string): number {
+  return (new Date(to).getTime() - new Date(from).getTime()) / 3_600_000
+}

@@ -1,6 +1,6 @@
 import { data, type LoaderFunctionArgs } from 'react-router'
 
-import { getAssignableUnits, getTenantDetail, getTenants } from '@/data/services'
+import { getAssignableUnits, getServiceRequests, getTenantDetail, getTenants } from '@/data/services'
 
 export async function tenantsLoader() {
   return { tenants: await getTenants() }
@@ -9,7 +9,8 @@ export async function tenantsLoader() {
 export async function tenantDetailLoader({ params }: LoaderFunctionArgs) {
   const detail = params.tenantId ? await getTenantDetail(params.tenantId) : null
   if (!detail) throw data('Tenant not found', { status: 404 })
-  return detail
+  // Maintenance requests the tenant reported (shown on Overview and Activity).
+  return { ...detail, maintenance: await getServiceRequests({ tenantId: detail.tenant.id }) }
 }
 
 export async function tenantCreateLoader() {

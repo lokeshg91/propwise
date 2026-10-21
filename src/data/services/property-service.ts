@@ -1,5 +1,4 @@
 import { activities } from '@/data/mock/activities'
-import { maintenanceRequests } from '@/data/mock/maintenance-requests'
 import { rentPayments } from '@/data/mock/payments'
 import { createId, type DemoDatabase, readDatabase, updateDatabase } from '@/data/store/demo-store'
 import { isCurrentLease } from '@/data/domain/lease-rules'
@@ -10,12 +9,12 @@ import {
   recordPropertyEvent,
   refreshPropertyTotals,
 } from '@/data/services/occupancy'
+import { listRequestItems, type RequestListItem } from '@/data/services/maintenance-service'
 import { ServiceError } from '@/data/services/service-error'
 import { simulateLatency } from '@/data/services/simulate-latency'
 import {
   type Activity,
   type Lease,
-  type MaintenanceRequest,
   type Property,
   type PropertyEvent,
   type PropertyEventKind,
@@ -32,7 +31,8 @@ export interface PropertyDetail {
   units: Unit[]
   events: PropertyEvent[]
   activities: Activity[]
-  maintenanceRequests: MaintenanceRequest[]
+  /** Stored maintenance requests for this property, newest first. */
+  maintenanceRequests: RequestListItem[]
   payments: RentPayment[]
   /** Active and pending leases on this property's units. */
   currentLeases: Array<Lease & { tenant: Pick<Tenant, 'id' | 'name'> }>
@@ -55,7 +55,7 @@ export function getPropertyDetail(id: string): Promise<PropertyDetail | null> {
     units: db.units.filter((unit) => unit.propertyId === id),
     events: db.events.filter((event) => event.propertyId === id),
     activities: activities.filter((activity) => activity.propertyId === id),
-    maintenanceRequests: maintenanceRequests.filter((request) => request.propertyId === id),
+    maintenanceRequests: listRequestItems(db, { propertyId: id }),
     payments: rentPayments.filter((payment) => payment.propertyId === id),
     currentLeases: db.leases
       .filter((lease) => lease.propertyId === id && isCurrentLease(lease))

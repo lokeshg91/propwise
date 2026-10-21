@@ -4,8 +4,9 @@ import { Link } from 'react-router'
 import { ActivityTimeline, type ActivityItem } from '@/components/shared/activity-timeline'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { type TenantDetail } from '@/data/services'
-import { DetailList } from '@/features/tenants/components/detail-list'
+import { type RequestListItem, type TenantDetail } from '@/data/services'
+import { RequestsMiniList } from '@/features/maintenance/components/requests-mini-list'
+import { DetailList } from '@/components/shared/detail-list'
 import { LeaseAlert } from '@/features/tenants/components/lease-alert'
 import { LeaseStatusBadge } from '@/features/tenants/components/tenant-badges'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -13,13 +14,15 @@ import { type LeaseDisplayStatus } from '@/types'
 
 interface TenantOverviewTabProps {
   detail: TenantDetail
+  /** Maintenance requests the tenant reported. */
+  maintenance: RequestListItem[]
   leaseStatus: LeaseDisplayStatus | null
   timeline: ActivityItem[]
   onShowLease: () => void
   onShowActivity: () => void
 }
 
-export function TenantOverviewTab({ detail, leaseStatus, timeline, onShowLease, onShowActivity }: TenantOverviewTabProps) {
+export function TenantOverviewTab({ detail, maintenance, leaseStatus, timeline, onShowLease, onShowActivity }: TenantOverviewTabProps) {
   const { tenant, lease, property } = detail
   const leaseRecord = detail.leases.find((entry) => entry.id === lease?.id)
   const current = lease?.status === 'active' || lease?.status === 'pending'
@@ -113,6 +116,15 @@ export function TenantOverviewTab({ detail, leaseStatus, timeline, onShowLease, 
             />
           </CardContent>
         </Card>
+        <RequestsMiniList
+          items={maintenance}
+          reportHref={
+            lease?.status === 'active'
+              ? `/maintenance/new?propertyId=${lease.propertyId}&unitId=${lease.unitId}&tenantId=${tenant.id}&from=tenant`
+              : null
+          }
+          allHref={`/maintenance?status=all&q=${encodeURIComponent(tenant.name)}`}
+        />
         <Card>
           <CardHeader>
             <CardTitle>Emergency contact</CardTitle>

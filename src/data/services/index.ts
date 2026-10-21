@@ -26,3 +26,27 @@ export {
   updateTenant,
 } from './tenant-service'
 export { getCurrentUser } from './user-service'
+export {
+  assignVendor,
+  type CancelRequestInput,
+  cancelRequest,
+  type CompleteRequestInput,
+  completeRequest,
+  type CreateRequestOptions,
+  createServiceRequest,
+  getRequestFormOptions,
+  getServiceRequestDetail,
+  getServiceRequests,
+  getVendors,
+  holdRequest,
+  reassignVendor,
+  reopenRequest,
+  type RequestDetail,
+  type RequestFormOptions,
+  type RequestListItem,
+  rescheduleWorkOrder,
+  resumeRequest,
+  startWork,
+  updateServiceRequest,
+  type WorkOrderWithVendor,
+} from './maintenance-service'

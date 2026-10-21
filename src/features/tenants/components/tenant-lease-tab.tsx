@@ -6,7 +6,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getLeaseDisplayStatus } from '@/data/domain/lease-rules'
 import { type TenantDetail } from '@/data/services'
-import { DetailList } from '@/features/tenants/components/detail-list'
+import { DetailList } from '@/components/shared/detail-list'
 import { LeaseAlert } from '@/features/tenants/components/lease-alert'
 import { type LeaseAction } from '@/features/tenants/components/lease-action-dialogs'
 import { LeaseStatusBadge } from '@/features/tenants/components/tenant-badges'

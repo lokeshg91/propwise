@@ -287,3 +287,13 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Route loading bar (NavigationProgress). */
+@keyframes navigation-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}

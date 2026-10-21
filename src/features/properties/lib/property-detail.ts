@@ -46,13 +46,13 @@ export function buildPropertyTimeline(detail: PropertyDetail): TimelineItem[] {
     items.push({ id: activity.id, category, title: activity.title, description: activity.description, createdAt: activity.createdAt })
   }
 
-  for (const request of detail.maintenanceRequests) {
-    const where = request.unit
+  for (const { request, unit, vendor } of detail.maintenanceRequests) {
+    const where = unit ? `${property.type === 'commercial' ? 'Suite' : 'Unit'} ${unit.number}` : (request.area ?? 'Common area')
     items.push({
       id: `${request.id}-created`,
       category: 'maintenance',
       title: `${request.id} reported`,
-      description: `${request.issue} — ${where}`,
+      description: `${request.title} — ${where}`,
       createdAt: request.createdAt,
     })
     if (request.completedAt) {
@@ -60,7 +60,7 @@ export function buildPropertyTimeline(detail: PropertyDetail): TimelineItem[] {
         id: `${request.id}-completed`,
         category: 'completed',
         title: `${request.id} completed`,
-        description: `${request.issue} resolved${request.vendor ? ` by ${request.vendor}` : ''}`,
+        description: `${request.title} resolved${vendor ? ` by ${vendor.name}` : ''}`,
         createdAt: request.completedAt,
       })
     }

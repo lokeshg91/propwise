@@ -90,3 +90,61 @@ export function recordPropertyEvent(
 ): void {
   db.events.unshift({ id: createId('evt'), propertyId, kind, title, description, createdAt: new Date().toISOString() })
 }
+
+/* ------------------------------------------------------------ maintenance */
+
+export interface UnitCheck {
+  allowed: boolean
+  reason?: string
+}
+
+/**
+ * Whether maintenance may take a unit offline. Only a vacant unit with no
+ * active or pending lease qualifies; occupied and reserved units are never
+ * changed by maintenance.
+ */
+export function canTakeUnitOffline(db: DemoDatabase, unitId: string): UnitCheck {
+  const unit = findUnit(db, unitId)
+  const lease = currentLeaseForUnit(db, unitId)
+  if (lease?.status === 'active' || unit.status === 'occupied') return { allowed: false, reason: 'This unit is occupied by an active lease.' }
+  if (lease?.status === 'pending') return { allowed: false, reason: 'This unit is reserved by a pending lease.' }
+  if (unit.status === 'maintenance') return { allowed: false, reason: 'This unit is already under maintenance.' }
+  return { allowed: true }
+}
+
+export function takeUnitOffline(db: DemoDatabase, unitId: string): Unit {
+  const check = canTakeUnitOffline(db, unitId)
+  if (!check.allowed) throw new ServiceError('conflict', check.reason ?? 'This unit can’t be taken offline.', 'takeUnitOffline')
+  const unit = findUnit(db, unitId)
+  Object.assign(unit, { status: 'maintenance', updatedAt: new Date().toISOString() } satisfies Partial<Unit>)
+  refreshPropertyTotals(db, unit.propertyId)
+  return unit
+}
+
+/**
+ * Whether a unit under maintenance can go back to vacant. Not while a lease
+ * holds it, or while another open request took it offline.
+ */
+export function canReturnUnitToVacant(db: DemoDatabase, unitId: string, exceptRequestId?: string): UnitCheck {
+  const unit = findUnit(db, unitId)
+  if (unit.status !== 'maintenance') return { allowed: false, reason: 'The unit isn’t under maintenance.' }
+  if (currentLeaseForUnit(db, unitId)) return { allowed: false, reason: 'A lease holds this unit.' }
+  const blocking = db.serviceRequests.find(
+    (request) =>
+      request.id !== exceptRequestId &&
+      request.unitId === unitId &&
+      request.unitTakenOffline &&
+      ['open', 'scheduled', 'in-progress', 'on-hold'].includes(request.status),
+  )
+  if (blocking) return { allowed: false, reason: `${blocking.id} still needs the unit offline.` }
+  return { allowed: true }
+}
+
+export function returnUnitToVacant(db: DemoDatabase, unitId: string, exceptRequestId?: string): Unit {
+  const check = canReturnUnitToVacant(db, unitId, exceptRequestId)
+  if (!check.allowed) throw new ServiceError('conflict', check.reason ?? 'This unit can’t return to vacant.', 'returnUnitToVacant')
+  const unit = findUnit(db, unitId)
+  Object.assign(unit, { status: 'vacant', updatedAt: new Date().toISOString() } satisfies Partial<Unit>)
+  refreshPropertyTotals(db, unit.propertyId)
+  return unit
+}
