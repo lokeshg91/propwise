@@ -6,6 +6,7 @@ import { AuthLayout } from '@/app/layouts/auth-layout'
 import { navHandle, type RouteHandle } from '@/app/routes/route-handle'
 import { AppLoadingScreen } from '@/app/routes/app-loading-screen'
 import { NotFoundPage } from '@/app/routes/not-found-page'
+import { skipSearchParamRevalidation } from '@/app/routes/revalidation'
 import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
 
 /** Feature pages are code-split; each module loads on first visit. */
@@ -30,13 +31,19 @@ export const routes: RouteObject[] = [
       {
         Component: AppLayout,
         loader: appLayoutLoader,
+        shouldRevalidate: skipSearchParamRevalidation,
         children: [
           {
             path: 'dashboard',
             handle: navHandle('/dashboard'),
-            lazy: async () => ({
-              Component: (await import('@/features/dashboard/pages/dashboard-page')).DashboardPage,
-            }),
+            shouldRevalidate: skipSearchParamRevalidation,
+            lazy: async () => {
+              const [{ DashboardPage }, { dashboardLoader }] = await Promise.all([
+                import('@/features/dashboard/pages/dashboard-page'),
+                import('@/features/dashboard/dashboard.loader'),
+              ])
+              return { Component: DashboardPage, loader: dashboardLoader }
+            },
           },
           {
             path: 'properties',

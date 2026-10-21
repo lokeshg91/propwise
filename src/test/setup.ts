@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeEach, vi } from 'vitest'
+
+// The first render lazy-loads route modules (including Recharts).
+configure({ asyncUtilTimeout: 4000 })
 
 /** Controls the mocked `prefers-color-scheme: dark` result in tests. */
 export const mediaState = { prefersDark: false }

@@ -12,6 +12,8 @@ interface EmptyStateProps {
   actions?: ReactNode
   /** Use `h1` when the empty state is the page's main content. */
   titleAs?: 'h1' | 'h2' | 'h3'
+  /** Compact variant for use inside cards and tables. */
+  size?: 'default' | 'sm'
   className?: string
 }
 
@@ -22,16 +24,23 @@ export function EmptyState({
   eyebrow,
   actions,
   titleAs: Title = 'h2',
+  size = 'default',
   className,
 }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center px-6 py-14 text-center sm:py-20',
+        'flex flex-col items-center justify-center px-6 text-center',
+        size === 'sm' ? 'py-10' : 'py-14 sm:py-20',
         className,
       )}
     >
-      <div className="mb-5 flex size-12 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
+      <div
+        className={cn(
+          'flex items-center justify-center rounded-xl border border-border bg-card shadow-sm',
+          size === 'sm' ? 'mb-3 size-10' : 'mb-5 size-12',
+        )}
+      >
         <Icon className="size-5 text-primary" aria-hidden="true" />
       </div>
       {eyebrow ? (
@@ -39,12 +48,14 @@ export function EmptyState({
           {eyebrow}
         </p>
       ) : null}
-      <Title className="text-h2 text-foreground">{title}</Title>
+      <Title className={cn('text-foreground', size === 'sm' ? 'text-h3' : 'text-h2')}>{title}</Title>
       {description ? (
-        <p className="mt-2 max-w-md text-body text-muted-foreground">{description}</p>
+        <p className="mt-1.5 max-w-md text-body text-muted-foreground">{description}</p>
       ) : null}
       {actions ? (
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">{actions}</div>
+        <div className={cn('flex flex-wrap items-center justify-center gap-2', size === 'sm' ? 'mt-4' : 'mt-6')}>
+          {actions}
+        </div>
       ) : null}
     </div>
   )

@@ -57,6 +57,20 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | PageHeader, PageContainer, EmptyState | `components/shared/` | Page layout primitives |
 | BrandMark, BrandLogo | `components/shared/` | Token-coloured logo; the favicon uses the same geometry |
 | ThemeSwitcher | `components/shared/theme-switcher.tsx` | Header dropdown plus reusable radio items |
+| SegmentedControl | `components/shared/segmented-control.tsx` | Single-select pill group (Radix ToggleGroup) for filters |
+| SearchInput | `components/shared/search-input.tsx` | Search field with icon, clear button and required accessible label |
+| TrendIndicator | `components/shared/trend-indicator.tsx` | Up/down change chip; direction shown by icon and sign, not only colour |
+| DataTable | `components/tables/data-table.tsx` | TanStack Table v9: sortable headers with `aria-sort`, search, pagination, empty state, optional mobile card layout |
+| Chart helpers | `components/charts/` | `chartAxisProps`, `chartGridProps`, `CHART_COLORS`, `ChartTooltipCard`, `ChartLegend` |
+| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge` |
+
+## Charts
+
+- **Colours:** series use `chart-1`–`chart-5` through `CHART_COLORS`, so they switch with the theme automatically.
+- **Status fills:** non-text status fills (bars, donut segments) use `chart-3` amber. The text-grade `warning` token is reserved for text and tinted badges.
+- **Axes and grid:** axes have no lines, `muted-foreground` 12px ticks and dashed `border` gridlines.
+- **Tooltips and legends:** tooltips use `ChartTooltipCard` (popover surface, swatch, label, tabular value). Legends are rendered as HTML outside the SVG so they wrap responsively.
+- **Accessibility:** each chart has a text summary (`role="img"` with an `aria-label`), and the donut has a numeric legend, so no value is available only on hover.
 
 ## States
 

@@ -2,7 +2,7 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.2.0 — design system and application shell. The dashboard overview and business modules are added in later phases.
+> **Status:** v0.3.0 — design system, application shell and dashboard overview. Business modules (properties, tenants, maintenance, finance) are added in later phases.
 
 Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payments, email or SMS integrations. Connect it to your own APIs through the service layer in `src/data/services/`.
 
@@ -112,6 +112,13 @@ propwise/
 - **Design tokens:** semantic CSS variables for light and dark themes (background, surface, text, primary, status colours, charts and sidebar), a type scale, radius and elevation scale. All text pairs meet WCAG AA.
 - **Theme modes:** Light, Dark and System, saved in `localStorage` and applied before first paint, so there is no flash. System mode follows OS changes live.
 - **Application shell:** a 248px sidebar that collapses to a 72px icon rail (with tooltips and a saved state), a mobile drawer below 1024px, and a header with breadcrumbs, ⌘K page search, notifications, theme switcher and profile menu.
+- **Dashboard overview:**
+  - KPI cards with period comparisons.
+  - A monthly revenue chart (Recharts) with themed tooltips, and an occupancy donut.
+  - A property performance table and a maintenance overview with status filters.
+  - Upcoming rent payments and recent activity.
+  - The date range (3, 6 or 12 months) and property type filters update every section and are kept in the URL, so views can be shared.
+- **Data tables:** a reusable `DataTable` built on TanStack Table v9 with sorting, search, pagination and empty states. Below 1024px it switches to a card layout with a "Sort by" control.
 - **Routing:** code-split routes with React Router 8, a data loader for shell data, placeholder pages for upcoming modules, a 404 page and an error boundary.
 - **Accessibility:** a skip link, visible focus rings, labelled icon buttons and keyboard-operable menus and dialogs. Status is never shown by colour alone.
 
@@ -125,6 +132,19 @@ propwise/
 | `/properties`, `/tenants`, `/maintenance`, `/vendors`, `/finance`, `/reports` | Main modules |
 | `/staff`, `/notifications`, `/settings` | Management modules |
 | `*` | Not found |
+
+## Data layer
+
+The template ships with realistic, fictional sample data. Nothing is sent to a server.
+
+| Layer | Location | Purpose |
+| ----- | -------- | ------- |
+| Types | `src/types/` | `Property`, `MaintenanceRequest`, `RentPayment`, `Activity`, `PortfolioSnapshot`, dashboard view models |
+| Mock data | `src/data/mock/` | Sample records. Dates are relative to today, so the demo always looks current |
+| Services | `src/data/services/` | Async functions such as `getDashboardData()`. Replace their bodies with API calls |
+| Selectors | `src/features/dashboard/lib/` | Pure functions that filter and aggregate data for each widget (unit-tested) |
+
+Route loaders call services, and pages derive what they display through selectors. To connect a real backend, change the service functions only; the components stay the same.
 
 ## Theming
 
