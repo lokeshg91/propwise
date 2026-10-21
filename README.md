@@ -2,7 +2,7 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.1.0 — project foundation. Dashboard modules, design system and application shell are added in later phases.
+> **Status:** v0.2.0 — design system and application shell. The dashboard overview and business modules are added in later phases.
 
 Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payments, email or SMS integrations. Connect it to your own APIs through the service layer in `src/data/services/`.
 
@@ -25,6 +25,7 @@ Propwise is a **frontend-only** template. It uses local mock data and has no bac
 | Notifications | Sonner                           |
 | Testing       | Vitest + React Testing Library   |
 | Linting       | ESLint 10 (flat config) + typescript-eslint |
+| Font          | Inter Variable (`@fontsource-variable/inter`, self-hosted) |
 
 ## Requirements
 
@@ -105,6 +106,39 @@ propwise/
 - **Data boundary:** pages never import mock data directly; they call functions in `src/data/services/`, so you can replace mock data with API calls in one place.
 - **Theming:** colors come from semantic CSS variables in `src/styles/`. Avoid raw color values in feature components.
 - **Type safety:** strict mode with `noUncheckedIndexedAccess`; `any` is a lint error.
+
+## Features
+
+- **Design tokens:** semantic CSS variables for light and dark themes (background, surface, text, primary, status colours, charts and sidebar), a type scale, radius and elevation scale. All text pairs meet WCAG AA.
+- **Theme modes:** Light, Dark and System, saved in `localStorage` and applied before first paint, so there is no flash. System mode follows OS changes live.
+- **Application shell:** a 248px sidebar that collapses to a 72px icon rail (with tooltips and a saved state), a mobile drawer below 1024px, and a header with breadcrumbs, ⌘K page search, notifications, theme switcher and profile menu.
+- **Routing:** code-split routes with React Router 8, a data loader for shell data, placeholder pages for upcoming modules, a 404 page and an error boundary.
+- **Accessibility:** a skip link, visible focus rings, labelled icon buttons and keyboard-operable menus and dialogs. Status is never shown by colour alone.
+
+## Routes
+
+| Path | Page |
+| ---- | ---- |
+| `/` | Redirects to `/dashboard` |
+| `/login` | Demo sign-in (no authentication) |
+| `/dashboard` | Overview |
+| `/properties`, `/tenants`, `/maintenance`, `/vendors`, `/finance`, `/reports` | Main modules |
+| `/staff`, `/notifications`, `/settings` | Management modules |
+| `*` | Not found |
+
+## Theming
+
+All colours live in `src/styles/globals.css`. To rebrand, change the variables under `:root` (light) and `.dark` (dark). Components use utilities generated from these tokens, such as `bg-card`, `text-muted-foreground` and `bg-success/10 text-success`, never raw colour values. See [`docs/design-system.md`](docs/design-system.md) for the full token and typography reference.
+
+The theme preference is stored under the `propwise-theme` key. An inline script in `index.html` applies it before the app loads. If you use a strict Content Security Policy, allow that script with a hash or nonce.
+
+## Adding a module
+
+1. Add an entry to `NAV_SECTIONS` in `src/app/routes/navigation.ts` (label, path, icon, description).
+2. Create the page in `src/features/<module>/pages/`.
+3. Register the route in `src/app/routes/router.tsx` with `handle: navHandle('/<path>')`.
+
+The sidebar, mobile drawer, breadcrumbs and search pick up the new module automatically.
 
 ## Adding UI primitives
 

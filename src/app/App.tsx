@@ -1,7 +1,15 @@
+import { useState } from 'react'
+import { RouterProvider } from 'react-router/dom'
+
+import { AppProviders } from '@/app/providers/app-providers'
+import { createAppRouter } from '@/app/routes/router'
+
 export function App() {
+  const [router] = useState(createAppRouter)
+
   return (
-    <main className="flex min-h-svh items-center justify-center">
-      <h1 className="text-2xl font-semibold">Propwise</h1>
-    </main>
+    <AppProviders>
+      <RouterProvider router={router} />
+    </AppProviders>
   )
 }

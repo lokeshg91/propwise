@@ -2,12 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-    <meta name="description" content="Propwise is a premium property and facility management dashboard template." />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Propwise is a premium property and facility management dashboard template."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <title>Propwise — Property &amp; Facility Management Dashboard</title>
+    <!--
+      Applies the saved theme before first paint to prevent a flash of the
+      wrong theme. Keep the storage key in sync with src/lib/storage.ts.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('propwise-theme')
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var root = document.documentElement
+          root.classList.toggle('dark', dark)
+          root.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (error) {
+          /* Storage unavailable: fall back to the light theme. */
+        }
+      })()
+    </script>
   </head>
   <body>
+    <noscript>Propwise requires JavaScript to run.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
