@@ -62,7 +62,10 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | TrendIndicator | `components/shared/trend-indicator.tsx` | Up/down change chip; direction shown by icon and sign, not only colour |
 | DataTable | `components/tables/data-table.tsx` | TanStack Table v9: sortable headers with `aria-sort`, search, pagination, empty state, optional mobile card layout |
 | Chart helpers | `components/charts/` | `chartAxisProps`, `chartGridProps`, `CHART_COLORS`, `ChartTooltipCard`, `ChartLegend` |
-| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge` |
+| FormField | `components/forms/form-field.tsx` | Label, required marker, hint and error with `aria-invalid` and `aria-describedby` wired automatically |
+| FormSection | `components/forms/form-section.tsx` | Card section with a title column on wide screens |
+| Textarea, RadioGroup | `components/ui/` | shadcn-style primitives matching the other inputs |
+| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge` |
 
 ## Charts
 
@@ -71,6 +74,14 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 - **Axes and grid:** axes have no lines, `muted-foreground` 12px ticks and dashed `border` gridlines.
 - **Tooltips and legends:** tooltips use `ChartTooltipCard` (popover surface, swatch, label, tabular value). Legends are rendered as HTML outside the SVG so they wrap responsively.
 - **Accessibility:** each chart has a text summary (`role="img"` with an `aria-label`), and the donut has a numeric legend, so no value is available only on hover.
+
+## Forms
+
+- **Schemas:** forms use React Hook Form with Zod schemas kept in each feature's `lib/` folder. Shared number helpers live in `src/lib/form-schema.ts`.
+- **When errors appear:** fields validate on blur after the first interaction. On submit, an error summary appears and focus moves to the first invalid field.
+- **Messages:** errors say what to do ("Enter a 5-digit ZIP code") and appear below the field next to an icon.
+- **Required fields:** marked with a red asterisk; the asterisk is hidden from screen readers, and `aria-required` carries the meaning instead.
+- **Save buttons:** they show a spinner while saving. Edit forms keep Save disabled until something changes.
 
 ## States
 

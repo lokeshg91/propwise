@@ -18,8 +18,17 @@ export function writeStorage(key: string, value: string): void {
   }
 }
 
+export function removeStorage(key: string): void {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // Nothing to remove when storage is unavailable.
+  }
+}
+
 /** Namespaced keys for every value Propwise keeps in the browser. */
 export const STORAGE_KEYS = {
   theme: 'propwise-theme',
   sidebarCollapsed: 'propwise-sidebar-collapsed',
+  demoData: 'propwise-demo-data',
 } as const

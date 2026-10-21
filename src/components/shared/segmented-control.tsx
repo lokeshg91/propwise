@@ -39,7 +39,7 @@ export function SegmentedControl<TValue extends string>({
           key={option.value}
           value={option.value}
           className={cn(
-            'h-full cursor-pointer rounded-md px-3 text-label text-muted-foreground transition-[color,background-color,box-shadow] outline-none',
+            'h-full cursor-pointer rounded-md px-3 text-label whitespace-nowrap text-muted-foreground transition-[color,background-color,box-shadow] outline-none',
             'hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50',
             'data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-xs',
           )}

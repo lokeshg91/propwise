@@ -3,6 +3,8 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeEach, vi } from 'vitest'
 
+import { resetDemoData } from '@/data/store/demo-store'
+
 // The first render lazy-loads route modules (including Recharts).
 configure({ asyncUtilTimeout: 4000 })
 
@@ -40,6 +42,7 @@ installBrowserStubs()
 beforeEach(() => {
   mediaState.prefersDark = false
   window.localStorage.clear()
+  resetDemoData()
   document.documentElement.className = ''
   document.documentElement.removeAttribute('style')
 })

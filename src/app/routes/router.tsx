@@ -8,6 +8,7 @@ import { AppLoadingScreen } from '@/app/routes/app-loading-screen'
 import { NotFoundPage } from '@/app/routes/not-found-page'
 import { skipSearchParamRevalidation } from '@/app/routes/revalidation'
 import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
+import { propertyHandles } from '@/features/properties/properties.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
 export const routes: RouteObject[] = [
@@ -48,9 +49,51 @@ export const routes: RouteObject[] = [
           {
             path: 'properties',
             handle: navHandle('/properties'),
-            lazy: async () => ({
-              Component: (await import('@/features/properties/pages/properties-page')).PropertiesPage,
-            }),
+            children: [
+              {
+                index: true,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ PropertiesPage }, { propertiesLoader }] = await Promise.all([
+                    import('@/features/properties/pages/properties-page'),
+                    import('@/features/properties/properties.loaders'),
+                  ])
+                  return { Component: PropertiesPage, loader: propertiesLoader }
+                },
+              },
+              {
+                path: 'new',
+                handle: propertyHandles.create,
+                lazy: async () => ({
+                  Component: (await import('@/features/properties/pages/property-create-page')).PropertyCreatePage,
+                }),
+              },
+              {
+                path: ':propertyId',
+                handle: propertyHandles.detail,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ PropertyDetailsPage }, { propertyDetailLoader }, { PropertyRouteError }] = await Promise.all([
+                    import('@/features/properties/pages/property-details-page'),
+                    import('@/features/properties/properties.loaders'),
+                    import('@/features/properties/components/property-route-error'),
+                  ])
+                  return { Component: PropertyDetailsPage, loader: propertyDetailLoader, ErrorBoundary: PropertyRouteError }
+                },
+              },
+              {
+                path: ':propertyId/edit',
+                handle: propertyHandles.edit,
+                lazy: async () => {
+                  const [{ PropertyEditPage }, { propertyDetailLoader }, { PropertyRouteError }] = await Promise.all([
+                    import('@/features/properties/pages/property-edit-page'),
+                    import('@/features/properties/properties.loaders'),
+                    import('@/features/properties/components/property-route-error'),
+                  ])
+                  return { Component: PropertyEditPage, loader: propertyDetailLoader, ErrorBoundary: PropertyRouteError }
+                },
+              },
+            ],
           },
           {
             path: 'tenants',

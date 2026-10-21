@@ -1,0 +1,43 @@
+import { Pencil } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { type UnitRow } from '@/features/properties/components/unit-columns'
+import { UnitStatusBadge } from '@/features/properties/components/unit-status-badge'
+import { UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
+import { formatCurrency, formatNumber, formatShortDate } from '@/lib/format'
+
+export function UnitCard({ row, onEdit }: { row: UnitRow; onEdit: () => void }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-body font-medium text-foreground">{row.label}</p>
+          <p className="text-caption text-muted-foreground">
+            {UNIT_TYPE_LABELS[row.type]} · Floor {row.floor} · {formatNumber(row.areaSqft)} sq ft
+          </p>
+        </div>
+        <UnitStatusBadge status={row.status} />
+      </div>
+      <p className="flex justify-between gap-3 text-caption">
+        <span className="text-muted-foreground">{row.status === 'occupied' ? 'Rent' : 'Asking rent'}</span>
+        <span className="font-semibold text-foreground tabular-nums">{formatCurrency(row.rent)}/mo</span>
+      </p>
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
+        <p className="min-w-0 truncate text-caption text-muted-foreground">
+          {row.tenantName ? (
+            <>
+              <span className="text-foreground">{row.tenantName}</span>
+              {row.leaseEndDate ? ` · until ${formatShortDate(row.leaseEndDate)}, ${row.leaseEndDate.slice(0, 4)}` : ''}
+            </>
+          ) : (
+            'No tenant'
+          )}
+        </p>
+        <Button variant="ghost" size="sm" onClick={onEdit} aria-label={`Edit ${row.label}`}>
+          <Pencil data-icon="inline-start" />
+          Edit
+        </Button>
+      </div>
+    </div>
+  )
+}

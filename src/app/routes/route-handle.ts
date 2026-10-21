@@ -7,6 +7,10 @@ export interface RouteHandle {
   title: string
   /** Breadcrumb parent, e.g. the sidebar section. */
   section?: string
+  /** Linked breadcrumb between the section and the page, e.g. "Properties". */
+  parent?: { label: string; to: string }
+  /** Derives the title from the route's loader data, e.g. a property name. */
+  resolveTitle?: (loaderData: unknown) => string | undefined
 }
 
 export function isRouteHandle(value: unknown): value is RouteHandle {
@@ -28,8 +32,11 @@ export function navHandle(path: string): RouteHandle {
 /** Returns the handle of the deepest matched route that defines one. */
 export function getActiveHandle(matches: UIMatch[]): RouteHandle | undefined {
   for (let index = matches.length - 1; index >= 0; index -= 1) {
-    const handle = matches[index]?.handle
-    if (isRouteHandle(handle)) return handle
+    const match = matches[index]
+    const handle = match?.handle
+    if (isRouteHandle(handle)) {
+      return { ...handle, title: handle.resolveTitle?.(match?.loaderData) ?? handle.title }
+    }
   }
   return undefined
 }
