@@ -56,4 +56,5 @@ export {
   REQUEST_STATUSES,
   WORK_ORDER_STATUSES,
 } from './service-request'
-export type { Vendor } from './vendor'
+export type { Vendor, VendorEvent, VendorEventKind, VendorInput, VendorV3 } from './vendor'
+export { VENDOR_EVENT_KINDS } from './vendor'

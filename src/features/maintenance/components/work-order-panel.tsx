@@ -7,17 +7,20 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { type RequestAction } from '@/data/domain/maintenance-rules'
 import { type RequestDetail, type WorkOrderWithVendor } from '@/data/services'
-import { InactiveVendorBadge, WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
+import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
+import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { formatDateTime } from '@/features/maintenance/lib/request-time'
+import { replacedOrderOf, replacementOf } from '@/features/maintenance/lib/work-order-history'
 import { formatCurrency } from '@/lib/format'
 
 const money = (value: number | null) => (value === null ? '—' : formatCurrency(value))
 
-function VendorName({ order }: { order: WorkOrderWithVendor }) {
+/** "Reassigned to X" on a replaced work order, or "Took over from X" on its replacement. */
+function ReassignmentNote({ label, order }: { label: string; order: WorkOrderWithVendor | null }) {
+  if (!order) return null
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
-      <span className="font-medium text-foreground">{order.vendor.name}</span>
-      {order.vendor.active ? null : <InactiveVendorBadge />}
+    <span className="block text-caption text-muted-foreground">
+      {label} <VendorLink vendor={order.vendor} showInactive={false} /> <span className="whitespace-nowrap tabular-nums">· {order.id}</span>
     </span>
   )
 }
@@ -50,13 +53,14 @@ export function WorkOrderPanel({ detail, onAction }: { detail: RequestDetail; on
                 {
                   label: 'Vendor',
                   value: (
-                    <span className="flex flex-col">
-                      <VendorName order={latest} />
+                    <span className="flex flex-col gap-0.5">
+                      <VendorLink vendor={latest.vendor} className="font-medium" />
                       {latest.vendor.phone ? (
                         <span className="text-caption text-muted-foreground">
                           {latest.vendor.contactName} · {latest.vendor.phone}
                         </span>
                       ) : null}
+                      <ReassignmentNote label="Took over from" order={replacedOrderOf(latest, detail.workOrders)} />
                     </span>
                   ),
                 },
@@ -138,7 +142,10 @@ export function WorkOrderPanel({ detail, onAction }: { detail: RequestDetail; on
                     <TableRow key={order.id}>
                       <TableCell className="pl-5 tabular-nums">{order.id}</TableCell>
                       <TableCell>
-                        <VendorName order={order} />
+                        <span className="flex flex-col gap-0.5">
+                          <VendorLink vendor={order.vendor} className="font-medium" />
+                          <ReassignmentNote label="Reassigned to" order={replacementOf(order, detail.workOrders)} />
+                        </span>
                       </TableCell>
                       <TableCell>
                         <WorkOrderStatusBadge status={order.status} />

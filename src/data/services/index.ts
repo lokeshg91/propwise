@@ -50,3 +50,21 @@ export {
   updateServiceRequest,
   type WorkOrderWithVendor,
 } from './maintenance-service'
+export {
+  checkVendorDuplicates,
+  createVendor,
+  deleteVendor,
+  getVendorDetail,
+  getVendorList,
+  isVendorDuplicateError,
+  isVendorOpenJobsError,
+  setVendorActive,
+  updateVendor,
+  VENDOR_LIMITS,
+  type VendorDetail,
+  VendorDuplicateError,
+  type VendorListItem,
+  VendorOpenJobsError,
+  type VendorSaveOptions,
+  type VendorWorkOrder,
+} from './vendor-service'

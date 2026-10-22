@@ -2,7 +2,7 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.6.0 — design system, application shell, dashboard overview, and the Properties, Tenants and Maintenance modules. Vendor management and finance modules are added in later phases.
+> **Status:** v0.7.0 — design system, application shell, dashboard overview, and the Properties, Tenants, Maintenance and Vendors modules. Finance and reporting modules are added in later phases. See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
 
 Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payments, email or SMS integrations. Connect it to your own APIs through the service layer in `src/data/services/`.
 
@@ -129,6 +129,13 @@ propwise/
   - New and Edit request forms: issue, category and priority (with the resolution target), unit or common area, reporter (tenant, staff or inspection), access notes, an optional “take the vacant unit offline” switch and an optional vendor assignment.
   - Action dialogs for Assign, Reassign, Reschedule, Start, Hold, Resume, Complete, Cancel and Reopen. Completing or cancelling asks explicitly whether a unit under maintenance should return to Vacant.
   - A Maintenance tab on property details, “Report an issue” in the unit dialog, and a Maintenance requests card and activity entries on tenant profiles.
+- **Vendors module:**
+  - A listing with summary cards (total, active, inactive, open work orders), search by name, contact, email, phone or service, status (Active by default, Inactive, All), service and “Has open jobs” filters kept in the URL, sorting, pagination and cards on tablet and mobile.
+  - A vendor page with Overview (contact, company, services, current jobs, notes, performance), Work orders (ongoing, completed, cancelled, all, with links to each request and to the vendor a job was reassigned to) and Activity tabs.
+  - Performance shows how many jobs each figure is based on, and “Not enough data” instead of a misleading zero.
+  - Add and Edit vendor forms (Business, Contact, Services, Notes). A duplicate name or email is blocked and links to the existing vendor; a duplicate phone number asks for confirmation. Vendors are never merged automatically.
+  - Deactivate (lists the open work orders that stay with the vendor), Reactivate, and Delete (only for vendors that were never assigned a work order; otherwise the dialog explains why and offers Deactivate instead).
+  - Vendor names in Maintenance (request table, cards, current and earlier work orders) link to the vendor page by id, keep the Inactive badge and show both vendors of a reassignment.
 - **Tenants module:**
   - A listing with portfolio metrics (active tenants, upcoming move-ins, expiring and holdover leases, rent roll), search by name, email, phone or property, tenant-status and lease-status filters kept in the URL, sorting, pagination and cards on tablet and mobile.
   - A details page with Overview, Lease, Payments and Activity tabs.
@@ -159,7 +166,11 @@ propwise/
 | `/maintenance/:requestId` | Request details, work orders and activity |
 | `/maintenance/:requestId/edit` | Edit request details |
 | `/properties/:propertyId?tab=maintenance` | A property's requests |
-| `/vendors`, `/finance`, `/reports` | Main modules (placeholders) |
+| `/vendors` | Vendors listing (`?q=`, `?status=active\|inactive\|all`, `?category=`, `?openJobs=1`) |
+| `/vendors/new` | Add vendor |
+| `/vendors/:vendorId` | Vendor details (`?tab=overview\|work-orders\|activity`) |
+| `/vendors/:vendorId/edit` | Edit vendor |
+| `/finance`, `/reports` | Main modules (placeholders) |
 | `/staff`, `/notifications`, `/settings` | Management modules |
 | `*` | Not found |
 
@@ -169,12 +180,12 @@ The template ships with realistic, fictional sample data. Nothing is sent to a s
 
 | Layer | Location | Purpose |
 | ----- | -------- | ------- |
-| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `RentCharge`, `MaintenanceRequest`, `RentPayment`, `Activity`, `PortfolioSnapshot`, dashboard view models |
+| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `RentCharge`, `ServiceRequest`, `WorkOrder`, `Vendor`, `VendorEvent`, `RentPayment`, `Activity`, `PortfolioSnapshot`, dashboard view models |
 | Mock data | `src/data/mock/` | Sample records. Dates are relative to today, so the demo always looks current |
 | Services | `src/data/services/` | Async functions such as `getDashboardData()`. Replace their bodies with API calls |
 | Selectors | `src/features/dashboard/lib/` | Pure functions that filter and aggregate data for each widget (unit-tested) |
-| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`) and maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`) shared by services and UI |
-| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders and change history created or edited in the app, saved to `localStorage` (`propwise-demo-data`, schema v3). `resetDemoData()` restores the sample data |
+| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`), maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`) and vendor rules (`normalizeVendorName`, `findVendorConflicts`, `getVendorPerformance`) shared by services and UI |
+| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders, vendor activity and change history created or edited in the app, saved to `localStorage` (`propwise-demo-data`, schema v4). `resetDemoData()` restores the sample data |
 
 Route loaders call services, and pages derive what they display through selectors. To connect a real backend, change the service functions only; the components stay the same.
 
@@ -201,9 +212,31 @@ Route loaders call services, and pages derive what they display through selector
 - **Lifecycle:** Open → Scheduled (vendor assigned) → In progress → Completed, with On hold and Resume from Scheduled or In progress. Cancel is allowed from any active status and is **final**: a cancelled request can't be reopened or edited. A completed request can be reopened within **30 days**. One table (`TRANSITIONS` in `maintenance-rules.ts`) drives both the buttons shown and the service checks, so the UI can't skip a rule.
 - **Resolution targets:** urgent 24 hours, high 3 days, medium 7 days, low 14 days (`SLA_HOURS`). Overdue and due-soon are derived, never stored.
 - **Work orders:** at most one active (scheduled or in progress) work order per request. Reassigning cancels the current one, which stays in the history, and records the change in the request activity. Completed work orders keep their final cost and completion date. Costs are plain numbers: Propwise doesn't create invoices or process payments.
-- **Vendors:** inactive vendors can't take new work orders but still appear on their past work orders. Vendor management screens come with the Vendors module.
+- **Vendors:** inactive vendors can't take new work orders but still appear, and link, on their past and open work orders. Open work orders of a deactivated vendor can still be started, completed or reassigned.
 - **Unit status protection:** only a vacant unit with no active or pending lease can be taken offline (Under maintenance), and only when you switch it on. Occupied and reserved units are never changed by maintenance. Completing or cancelling a request for a unit under maintenance asks whether it should return to Vacant; answering “No” keeps its status. A unit isn't returned while another open request still needs it offline.
 - **Dashboard:** it keeps its fixed sample snapshot, so its maintenance figures differ from the Maintenance module.
+
+### Vendor rules
+
+- **One vendor model:** `Vendor` (`src/types/vendor.ts`) has `id`, `name`, `company`, `categories`, `contactName`, `phone`, `email`, `notes`, `active`, `deactivatedAt`, `createdAt` and `updatedAt`. Work orders refer to vendors by `id` only.
+- **Duplicates:** names are compared after trimming and ignoring case, accents, punctuation, a leading “The”, `&`/“and” and legal suffixes (LLC, Inc, Co, Company, Corp, Ltd, PLC, LP, LLP, PLLC, PC), so “BlueLine Plumbing, LLC” matches “blueline plumbing”. Emails are compared case-insensitively and phones by their last 10 digits. A name or email match blocks saving and identifies the existing vendor. A phone match only warns and needs confirmation (`acknowledgePhoneMatch`). Vendors are never merged.
+- **History:** renaming a vendor changes its name everywhere it is shown live, because work orders keep the id. Vendor activity and maintenance activity keep the name used at the time, and a rename is recorded as “Renamed from …”. Reactivating keeps the earlier deactivation in the history.
+- **Deactivation:** allowed with open work orders after confirmation (`confirmOpenJobs`). Those work orders are not changed. Inactive vendors are rejected for new assignments and reassignments.
+- **Deletion:** only for a vendor that no work order of any status (including cancelled or reassigned) has ever referenced. It removes the vendor and its activity.
+- **Performance** (`getVendorPerformance`), each figure stored with the number of jobs it is based on:
+  - *On-time rate:* completed work orders done by the request's resolution target ÷ eligible completed work orders (reopened requests are excluded because their target was reset).
+  - *Average resolution:* from the work order's creation (assignment) to completion.
+  - *Total spend:* actual cost of completed work orders that have one.
+  - *Cost vs estimate:* (Σ actual − Σ estimate) ÷ Σ estimate, only for work orders with both.
+  - *Last job:* most recent completed work order.
+  - Rates and averages need at least 3 eligible jobs (`MIN_JOBS_FOR_RATES`); totals need 1. Otherwise the page shows “Not enough data”.
+- **Missing references:** if a work order points at a vendor id that no longer exists, Maintenance shows “Unknown vendor” as plain text with no link.
+
+### Demo data
+
+- 18 vendors: the 15 from v0.6 (ids unchanged) with company names and notes added, plus three new ones that exercise the vendor rules: **Northstar Painting Co.** (active, no jobs, so it can be deleted and shows “Not enough data”), **Lakeside Locksmiths** (active, same phone number as SecureLock Co.) and **Prairie HVAC Partners** (inactive, no jobs).
+- Two vendors are inactive: Rapid Rooter Drains and Prairie HVAC Partners.
+- No requests or work orders were added in v0.7, so Maintenance figures are unchanged. MR-1005 shows a reassignment (Propwise In-house Team → Apex Door Systems).
 
 ### Storage migration
 
@@ -212,7 +245,17 @@ Saved data is upgraded automatically on first load, one step at a time, and ever
 - **v1 → v2 (from v0.4):** each occupied unit gets a tenant and active lease built from its stored tenant name, rent and lease end. Ids derive from the unit (`ten_u_<unitId>`).
 - **v2 → v3 (from v0.5):** vendors (ids derived from their names), the 17 original maintenance requests with their original ids (MR-2045 to MR-2061), and generated demo requests linked to existing units and tenants (MR-1001 to MR-1060). New requests continue from MR-2062.
 
+- **v3 → v4 (from v0.6):** vendors gain `company`, `notes`, `deactivatedAt`, `createdAt` and `updatedAt`. Only missing fields are filled; stored names, contacts, categories and active status are kept. A `vendorEvents` collection is added with a “created” event for each vendor and a “deactivated” event for inactive ones (fixed ids `vev_<vendorId>_created` / `_deactivated`). The three new demo vendors are added unless a vendor with the same id, name or email already exists. Properties, units, tenants, leases, requests, work orders and maintenance activity are not touched.
+
 Because every id is fixed, running the migration again never creates duplicates. The upgraded data is saved immediately. If an upgrade fails, the stored data is left untouched and the app runs on sample data without saving for that session; the upgrade is retried on the next load.
+
+### Known limitations
+
+- The Dashboard keeps its fixed sample snapshot. Vendors, properties and requests added in the app don't change its figures.
+- Vendor performance is calculated from work orders in this browser's demo store only; there is no rating, review or invoice data.
+- Vendor documents, insurance and licence tracking, availability calendars, rate cards and a vendor portal are not included.
+- Maintenance activity entries keep the vendor name used at the time as plain text; they don't link to the vendor.
+- All data is stored in `localStorage` in one browser. Clearing site data (or calling `resetDemoData()`) restores the sample data.
 
 ## Theming
 

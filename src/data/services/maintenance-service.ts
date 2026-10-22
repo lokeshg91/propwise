@@ -44,14 +44,14 @@ export interface RequestListItem {
   property: Pick<Property, 'id' | 'name' | 'type'> | null
   unit: Pick<Unit, 'id' | 'number' | 'status'> | null
   tenant: Pick<Tenant, 'id' | 'name'> | null
-  /** Vendor of the active work order, or of the most recent one. */
-  vendor: Pick<Vendor, 'id' | 'name' | 'active'> | null
+  /** Vendor of the active work order, or of the most recent one. `missing` when the id no longer resolves. */
+  vendor: (Pick<Vendor, 'id' | 'name' | 'active'> & { missing: boolean }) | null
   activeWorkOrder: WorkOrder | null
 }
 
 export interface WorkOrderWithVendor extends WorkOrder {
-  /** Shown even if the vendor has since become inactive. */
-  vendor: Pick<Vendor, 'id' | 'name' | 'active' | 'phone' | 'email' | 'contactName'>
+  /** Shown even if the vendor has since become inactive. `missing` when the id no longer resolves. */
+  vendor: Pick<Vendor, 'id' | 'name' | 'active' | 'phone' | 'email' | 'contactName'> & { missing: boolean }
 }
 
 export interface RequestDetail extends RequestListItem {
@@ -86,8 +86,8 @@ export interface RequestFormOptions {
 function vendorName(db: DemoDatabase, id: string): WorkOrderWithVendor['vendor'] {
   const vendor = db.vendors.find((entry) => entry.id === id)
   return vendor
-    ? { id: vendor.id, name: vendor.name, active: vendor.active, phone: vendor.phone, email: vendor.email, contactName: vendor.contactName }
-    : { id, name: 'Unknown vendor', active: false, phone: '', email: '', contactName: '' }
+    ? { id: vendor.id, name: vendor.name, active: vendor.active, phone: vendor.phone, email: vendor.email, contactName: vendor.contactName, missing: false }
+    : { id, name: 'Unknown vendor', active: false, phone: '', email: '', contactName: '', missing: true }
 }
 
 const ordersFor = (db: DemoDatabase, requestId: string) =>

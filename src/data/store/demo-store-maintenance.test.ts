@@ -3,6 +3,7 @@ import { LEGACY_REQUEST_IDS } from '@/data/mock/maintenance-seed'
 import { properties as seedProperties } from '@/data/mock/properties'
 import { applyDemoAttentionStates, buildTenancyRecords } from '@/data/mock/tenancy-seed'
 import { generateSeedUnits } from '@/data/mock/units'
+import { buildSeedVendors } from '@/data/mock/vendor-seed'
 import {
   type DemoDatabase,
   type DemoDatabaseV1,
@@ -114,8 +115,10 @@ describe('fresh installation', () => {
   it('seeds vendors, the 17 original requests and generated demo requests', () => {
     const db = readDatabase()
     expect(db.version).toBe(SCHEMA_VERSION)
-    expect(db.vendors).toHaveLength(15)
-    expect(db.vendors.filter((vendor) => !vendor.active)).toHaveLength(1)
+    // The 15 Phase 6 vendors (same ids) plus the 3 added with the Vendors module.
+    expect(db.vendors).toHaveLength(18)
+    for (const vendor of buildSeedVendors()) expect(db.vendors.some((entry) => entry.id === vendor.id)).toBe(true)
+    expect(db.vendors.filter((vendor) => !vendor.active).map((vendor) => vendor.name).sort()).toEqual(['Prairie HVAC Partners', 'Rapid Rooter Drains'])
     for (const id of LEGACY_REQUEST_IDS) expect(db.serviceRequests.some((request) => request.id === id)).toBe(true)
     expect(db.serviceRequests.length).toBeGreaterThanOrEqual(55)
     expect(db.sequences.request).toBe(2062)
@@ -143,7 +146,7 @@ describe('fresh installation', () => {
   })
 })
 
-describe('Phase 5 (v2) → v3 migration', () => {
+describe('Phase 5 (v2) → current migration', () => {
   it('keeps every Phase 5 record and adds maintenance', () => {
     const v2 = buildV2Snapshot()
     storeRaw(v2)
@@ -157,7 +160,8 @@ describe('Phase 5 (v2) → v3 migration', () => {
     expect(db.leases).toEqual(v2.leases)
     expect(db.tenantEvents).toEqual(v2.tenantEvents)
 
-    expect(db.vendors).toHaveLength(15)
+    expect(db.vendors).toHaveLength(18)
+    for (const vendor of buildSeedVendors()) expect(db.vendors.some((entry) => entry.id === vendor.id)).toBe(true)
     for (const id of LEGACY_REQUEST_IDS) expect(db.serviceRequests.filter((request) => request.id === id)).toHaveLength(1)
     expectConsistent(db)
 

@@ -11,6 +11,7 @@ import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
 import { propertyHandles } from '@/features/properties/properties.handles'
 import { maintenanceHandles } from '@/features/maintenance/maintenance.handles'
 import { tenantHandles } from '@/features/tenants/tenants.handles'
+import { vendorHandles } from '@/features/vendors/vendors.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
 export const routes: RouteObject[] = [
@@ -209,9 +210,51 @@ export const routes: RouteObject[] = [
           {
             path: 'vendors',
             handle: navHandle('/vendors'),
-            lazy: async () => ({
-              Component: (await import('@/features/vendors/pages/vendors-page')).VendorsPage,
-            }),
+            children: [
+              {
+                index: true,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ VendorsPage }, { vendorsLoader }] = await Promise.all([
+                    import('@/features/vendors/pages/vendors-page'),
+                    import('@/features/vendors/vendors.loaders'),
+                  ])
+                  return { Component: VendorsPage, loader: vendorsLoader }
+                },
+              },
+              {
+                path: 'new',
+                handle: vendorHandles.create,
+                lazy: async () => ({
+                  Component: (await import('@/features/vendors/pages/vendor-create-page')).VendorCreatePage,
+                }),
+              },
+              {
+                path: ':vendorId',
+                handle: vendorHandles.detail,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ VendorDetailsPage }, { vendorDetailLoader }, { VendorRouteError }] = await Promise.all([
+                    import('@/features/vendors/pages/vendor-details-page'),
+                    import('@/features/vendors/vendors.loaders'),
+                    import('@/features/vendors/components/vendor-route-error'),
+                  ])
+                  return { Component: VendorDetailsPage, loader: vendorDetailLoader, ErrorBoundary: VendorRouteError }
+                },
+              },
+              {
+                path: ':vendorId/edit',
+                handle: vendorHandles.edit,
+                lazy: async () => {
+                  const [{ VendorEditPage }, { vendorDetailLoader }, { VendorRouteError }] = await Promise.all([
+                    import('@/features/vendors/pages/vendor-edit-page'),
+                    import('@/features/vendors/vendors.loaders'),
+                    import('@/features/vendors/components/vendor-route-error'),
+                  ])
+                  return { Component: VendorEditPage, loader: vendorDetailLoader, ErrorBoundary: VendorRouteError }
+                },
+              },
+            ],
           },
           {
             path: 'finance',

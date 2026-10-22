@@ -3,7 +3,8 @@ import { Link } from 'react-router'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { MaintenancePriorityBadge } from '@/features/maintenance/components/maintenance-badges'
 import { RequestActionsMenu } from '@/features/maintenance/components/request-actions-menu'
-import { CategoryLabel, InactiveVendorBadge, RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
+import { CategoryLabel, RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
+import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { type RequestRow } from '@/features/maintenance/lib/request-list'
 import { REQUEST_STATUS_LABELS } from '@/features/maintenance/lib/request-meta'
 import { timingLine } from '@/features/maintenance/lib/request-time'
@@ -83,12 +84,7 @@ export function createRequestColumns({ showProperty = true }: { showProperty?: b
       cell: (info) => {
         const row = info.row.original
         if (!row.vendorName) return <span className="text-muted-foreground">Unassigned</span>
-        return (
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span className="text-foreground">{row.vendorName}</span>
-            {row.vendorActive ? null : <InactiveVendorBadge />}
-          </span>
-        )
+        return <VendorLink vendor={{ id: row.vendorId, name: row.vendorName, active: row.vendorActive, missing: row.vendorMissing }} />
       },
     }),
     column.accessor('createdAt', {

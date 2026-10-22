@@ -44,8 +44,11 @@ export interface RequestRow {
   /** "Unit 204", "Suite 310" or the common-area name. */
   locationLabel: string
   tenantName: string
+  vendorId: string
   vendorName: string
   vendorActive: boolean
+  /** The work order points at a vendor id that no longer exists. */
+  vendorMissing: boolean
   createdAt: string
   /** Text used by search: id, title, property, location, vendor and tenant. */
   searchText: string
@@ -93,8 +96,10 @@ export function toRequestRow(item: RequestListItem, now: Date = new Date()): Req
     propertyName: item.property?.name ?? 'Unknown property',
     locationLabel: location,
     tenantName: item.tenant?.name ?? '',
+    vendorId: item.vendor?.id ?? '',
     vendorName: item.vendor?.name ?? '',
     vendorActive: item.vendor?.active ?? true,
+    vendorMissing: item.vendor?.missing ?? false,
     createdAt: request.createdAt,
     searchText: [request.id, request.title, CATEGORY_LABELS[request.category], item.property?.name, location, item.vendor?.name, item.tenant?.name]
       .filter(Boolean)

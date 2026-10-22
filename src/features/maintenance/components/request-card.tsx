@@ -2,7 +2,8 @@ import { Link } from 'react-router'
 
 import { MaintenancePriorityBadge } from '@/features/maintenance/components/maintenance-badges'
 import { RequestActionsMenu } from '@/features/maintenance/components/request-actions-menu'
-import { CategoryLabel, InactiveVendorBadge, RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
+import { CategoryLabel, RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
+import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { type RequestRow } from '@/features/maintenance/lib/request-list'
 import { timingLine } from '@/features/maintenance/lib/request-time'
 import { formatRelativeTime } from '@/lib/format'
@@ -39,8 +40,11 @@ export function RequestCard({ row, showProperty = true }: { row: RequestRow; sho
       </p>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border pt-3 text-caption">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className={row.vendorName ? 'truncate text-foreground' : 'text-muted-foreground'}>{row.vendorName || 'Unassigned'}</span>
-          {row.vendorName && !row.vendorActive ? <InactiveVendorBadge /> : null}
+          {row.vendorName ? (
+            <VendorLink vendor={{ id: row.vendorId, name: row.vendorName, active: row.vendorActive, missing: row.vendorMissing }} />
+          ) : (
+            <span className="text-muted-foreground">Unassigned</span>
+          )}
         </span>
         <span className="text-muted-foreground">Opened {formatRelativeTime(row.createdAt)}</span>
       </div>

@@ -15,7 +15,7 @@ import {
   type ServiceRequest,
   type Tenant,
   type Unit,
-  type Vendor,
+  type VendorV3,
   type WorkOrder,
 } from '@/types'
 
@@ -35,7 +35,7 @@ export function requestNumber(id: string): number {
 }
 
 export interface MaintenanceRecords {
-  vendors: Vendor[]
+  vendors: VendorV3[]
   requests: ServiceRequest[]
   workOrders: WorkOrder[]
   events: MaintenanceEvent[]
@@ -46,7 +46,7 @@ interface Context {
   units: Unit[]
   tenants: Tenant[]
   leases: Lease[]
-  vendors: Vendor[]
+  vendors: VendorV3[]
   now: Date
 }
 
@@ -100,10 +100,10 @@ interface RequestSpec {
   cancelReason?: string
 }
 
-function vendorFor(ctx: Context, category: RequestCategory, seed: number): Vendor {
+function vendorFor(ctx: Context, category: RequestCategory, seed: number): VendorV3 {
   const matches = ctx.vendors.filter((vendor) => vendor.active && vendor.categories.includes(category))
   const fallback = ctx.vendors.find((vendor) => vendor.id === vendorIdFor('Propwise In-house Team')) ?? ctx.vendors[0]
-  return matches.length > 0 ? pick(matches, seed) : (fallback as Vendor)
+  return matches.length > 0 ? pick(matches, seed) : (fallback as VendorV3)
 }
 
 /** Turns a spec into a request, its work orders and its history. */

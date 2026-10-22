@@ -72,7 +72,10 @@ Inter Variable, with `cv11` and `ss01` font features. Use `tabular-nums` for fig
 | StatusAlert | `components/shared/status-alert.tsx` | Tinted notice (`danger`, `warning`, `info`, `success`) with an icon, title, next step and optional actions |
 | RouteErrorState | `components/shared/route-error-state.tsx` | 404 / load-error screen for a record, with a back button |
 | NavigationProgress | `components/shared/navigation-progress.tsx` | Thin top bar while the next page's data loads; respects reduced motion |
-| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge`, `TenantStatusBadge`, `LeaseStatusBadge`, `RentChargeBadge`, `RequestStatusBadge`, `WorkOrderStatusBadge` |
+| Domain badges | `features/*/components/` | `PropertyStatusBadge`, `MaintenancePriorityBadge`, `MaintenanceStatusBadge`, `PaymentStatusBadge`, `UnitStatusBadge`, `TenantStatusBadge`, `LeaseStatusBadge`, `RentChargeBadge`, `RequestStatusBadge`, `WorkOrderStatusBadge`, `VendorStatusBadge`, `InactiveVendorBadge` |
+| CategoryChips | `features/vendors/components/vendor-badges.tsx` | Service chips with an icon; `limit` shows “+N more” |
+| VendorLink | `features/maintenance/components/vendor-link.tsx` | Vendor name linking to `/vendors/:id` in table-link style (foreground text, primary + underline on hover, focus ring), with the Inactive badge; a missing vendor is plain muted text |
+| ConfirmDialog | `features/vendors/components/vendor-dialogs.tsx` | Confirmation with optional note field, inline error, extra action and hidden confirm for actions that aren't allowed |
 
 ### Lease status colours
 
@@ -97,6 +100,15 @@ Statuses that need action also show a tinted alert with the next step (End lease
 | On hold | neutral | Reason shown in a warning alert |
 | Completed | success | Reopen possible for 30 days |
 | Cancelled | neutral | Final |
+
+### Vendor status colours
+
+| Status | Badge | Notes |
+| --- | --- | --- |
+| Active | success | Can be assigned to new work orders |
+| Inactive | neutral | Kept for history; an info alert on the vendor page explains what still works |
+
+Duplicate name or email notices use the danger tone (blocking); a duplicate phone uses the warning tone (confirm to continue). Performance figures without enough jobs show “Not enough data” in muted text rather than a number.
 
 Priority badges reuse the Dashboard's `MaintenancePriorityBadge` (urgent danger, high warning, medium info, low neutral). The due line under a status is red when overdue and amber when due soon, and always says so in words.
 
