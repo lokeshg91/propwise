@@ -10,11 +10,13 @@ export function readStorage(key: string): string | null {
   }
 }
 
-export function writeStorage(key: string, value: string): void {
+/** Returns false when the browser refused the write (storage full or disabled). */
+export function writeStorage(key: string, value: string): boolean {
   try {
     window.localStorage.setItem(key, value)
+    return true
   } catch {
-    // Storage is unavailable; the preference simply won't persist.
+    return false
   }
 }
 

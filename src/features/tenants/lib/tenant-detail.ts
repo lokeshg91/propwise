@@ -13,7 +13,7 @@ import {
 import { type ActivityItem, type ActivityTone } from '@/components/shared/activity-timeline'
 import { type RequestListItem, type TenantDetail } from '@/data/services'
 import { locationLabel } from '@/features/maintenance/lib/request-list'
-import { type RentCharge, type TenantEventKind } from '@/types'
+import { type TenantEventKind } from '@/types'
 
 const EVENT_STYLES: Record<TenantEventKind, { icon: LucideIcon; tone: ActivityTone }> = {
   'tenant-created': { icon: UserPlus, tone: 'primary' },
@@ -66,19 +66,6 @@ export function buildTenantTimeline(detail: TenantDetail): ActivityItem[] {
   }
 
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-}
-
-export function summarizeLedger(ledger: RentCharge[]) {
-  const settled = ledger.filter((charge) => charge.status === 'paid')
-  const overdue = ledger.filter((charge) => charge.status === 'overdue')
-  return {
-    paidTotal: settled.reduce((sum, charge) => sum + charge.amount, 0),
-    paidCount: settled.length,
-    onTimeRate: settled.length === 0 ? 100 : (settled.filter((charge) => !charge.late).length / settled.length) * 100,
-    overdueTotal: overdue.reduce((sum, charge) => sum + charge.amount, 0),
-    overdueCount: overdue.length,
-    next: [...ledger].reverse().find((charge) => charge.status === 'scheduled' || charge.status === 'pending') ?? null,
-  }
 }
 
 /** "Reported MR-2062" entries for maintenance requests the tenant raised. */

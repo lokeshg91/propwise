@@ -1,8 +1,26 @@
 import { addDays, addMonths, parseIsoDate, todayIso, toIsoDate } from '@/data/domain/dates'
 import { hashString } from '@/data/mock/tenancy-seed'
-import { type Lease, type RentCharge } from '@/types'
+import { type Lease } from '@/types'
+
+/** A month in the v0.7 generated ledger. */
+export interface V07RentCharge {
+  id: string
+  leaseId: string
+  period: string
+  dueDate: string
+  amount: number
+  status: 'paid' | 'overdue' | 'scheduled' | 'pending'
+  paidAt: string | null
+  late: boolean
+}
+type RentCharge = V07RentCharge
 
 /**
+ * TEST ONLY — a frozen copy of the v0.7 tenant Payments ledger, which was
+ * generated on every read and never stored. v0.8 replaced it with the stored
+ * Finance ledger; tests use this copy to check the migrated history keeps the
+ * months v0.7 showed paid, late or overdue.
+ *
  * Demo rent ledger. Charges are generated from stored lease terms and a hash
  * of the lease id and period, so the same lease always produces the same
  * history; only the open charge moves with the calendar (upcoming → due).

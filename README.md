@@ -2,9 +2,9 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.7.0 — design system, application shell, dashboard overview, and the Properties, Tenants, Maintenance and Vendors modules. Finance and reporting modules are added in later phases. See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
+> **Status:** v0.8.0 — design system, application shell, dashboard overview, and the Properties, Tenants, Maintenance, Vendors and Finance modules. Reporting is added in a later phase. See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
 
-Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payments, email or SMS integrations. Connect it to your own APIs through the service layer in `src/data/services/`.
+Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payment processing, email or SMS integrations. Finance records payments; it never moves money. Connect it to your own APIs through the service layer in `src/data/services/`.
 
 ---
 
@@ -141,7 +141,13 @@ propwise/
   - A details page with Overview, Lease, Payments and Activity tabs.
   - Add and Edit tenant forms with an optional emergency contact and a lease block: property and available-unit pickers (rent prefilled from the asking rent), move-in type, dates, rent, deposit and due day.
   - Lease management: End lease (move-out date and reason), Cancel a pending lease, Mark as moved in, renew or change terms, move to another unit, and full lease history.
-  - A demo payment history, clearly labelled as generated sample data. Propwise doesn’t process payments.
+  - A Payments tab built from the Finance ledger: every charge and payment for the tenant (voided ones with their reasons), balance and aging, Record payment, Add income and View in Finance. Sample records are labelled “Local demo records”.
+- **Finance module** (details in [`docs/finance.md`](docs/finance.md)):
+  - **Overview:** income collected, expenses paid, net cash flow and outstanding receivables (cash basis, with billed and incurred alongside), period and property filters, an income vs expenses chart, collections and aging, property performance, recent records, upcoming obligations, expenses by category and payables.
+  - **Transactions:** every charge and bill with type, status, category, property, date and tenant/vendor filters, search, totals and cards on mobile. **Receivables:** balances per tenant with aging.
+  - **Record pages and actions:** Add income and Add bill (with optional immediate payment and monthly recurring charges), Edit, Record and Void payment, Adjust, Void, Add late fee, End recurring charge, Mark bill paid or unpaid. Duplicates are blocked or need confirmation. Every change keeps its reason in the record's history.
+  - **Integrations:** tenant Payments tab, a Finance tab on property details, bill links on completed work orders, and a Bills card on vendor profiles.
+  - **Storage banner** under the header: warning, critical, failed save and read-only states. A failed save never shows as saved.
 - **Data tables:** a reusable `DataTable` built on TanStack Table v9 with sorting, search, pagination and empty states. Below 1024px it switches to a card layout with a "Sort by" control.
 - **Routing:** code-split routes with React Router 8, a data loader for shell data, placeholder pages for upcoming modules, a 404 page and an error boundary.
 - **Accessibility:** a skip link, visible focus rings, labelled icon buttons and keyboard-operable menus and dialogs. Status is never shown by colour alone.
@@ -155,7 +161,7 @@ propwise/
 | `/dashboard` | Overview |
 | `/properties` | Properties listing |
 | `/properties/new` | Add property |
-| `/properties/:propertyId` | Property details (`?tab=overview\|units\|activity`) |
+| `/properties/:propertyId` | Property details (`?tab=overview\|units\|activity\|maintenance\|finance`) |
 | `/properties/:propertyId/edit` | Edit property |
 | `/tenants` | Tenants listing (`?q=`, `?status=active\|pending\|past`, `?lease=`) |
 | `/tenants/new` | Add tenant (`?propertyId=&unitId=` preselects a unit) |
@@ -170,7 +176,14 @@ propwise/
 | `/vendors/new` | Add vendor |
 | `/vendors/:vendorId` | Vendor details (`?tab=overview\|work-orders\|activity`) |
 | `/vendors/:vendorId/edit` | Edit vendor |
-| `/finance`, `/reports` | Main modules (placeholders) |
+| `/finance` | Finance overview (`?range=this-month\|3m\|6m\|12m\|ytd`, `?type=`, `?property=`) |
+| `/finance/transactions` | Transactions (`?q=`, `?kind=income\|expense`, `?status=`, `?category=`, `?property=`, `?range=…\|all`, `?party=tenant:<id>\|vendor:<id>`) |
+| `/finance/receivables` | Receivables by tenant (`?q=`, `?type=`, `?property=`, `?open=0`) |
+| `/finance/income/new` | Add income (`?leaseId=` or `?propertyId=` prefills) |
+| `/finance/expenses/new` | Add bill (`?propertyId=`, `?vendorId=` prefill) |
+| `/finance/transactions/:id` | Charge or bill details and actions |
+| `/finance/transactions/:id/edit` | Edit a manual charge or bill |
+| `/reports` | Reports (placeholder) |
 | `/staff`, `/notifications`, `/settings` | Management modules |
 | `*` | Not found |
 
@@ -180,12 +193,13 @@ The template ships with realistic, fictional sample data. Nothing is sent to a s
 
 | Layer | Location | Purpose |
 | ----- | -------- | ------- |
-| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `RentCharge`, `ServiceRequest`, `WorkOrder`, `Vendor`, `VendorEvent`, `RentPayment`, `Activity`, `PortfolioSnapshot`, dashboard view models |
+| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `ServiceRequest`, `WorkOrder`, `Vendor`, `VendorEvent`, `Charge`, `Payment`, `Expense`, `RecurringCharge`, `FinanceEvent`, `FinanceSettings`, `RentPayment` (Dashboard), `Activity`, `PortfolioSnapshot`, dashboard view models |
 | Mock data | `src/data/mock/` | Sample records. Dates are relative to today, so the demo always looks current |
 | Services | `src/data/services/` | Async functions such as `getDashboardData()`. Replace their bodies with API calls |
 | Selectors | `src/features/dashboard/lib/` | Pure functions that filter and aggregate data for each widget (unit-tested) |
-| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`), maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`) and vendor rules (`normalizeVendorName`, `findVendorConflicts`, `getVendorPerformance`) shared by services and UI |
-| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders, vendor activity and change history created or edited in the app, saved to `localStorage` (`propwise-demo-data`, schema v4). `resetDemoData()` restores the sample data |
+| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`), maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`), vendor rules (`normalizeVendorName`, `findVendorConflicts`, `getVendorPerformance`) and Finance rules (`money.ts`, `finance-rules.ts`, `finance-schedule.ts`, `finance-summary.ts`) shared by services and UI |
+| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders, Finance records and every history, saved to `localStorage` (`propwise-demo-data`, schema v5, compact column format). Each write is a transaction that is reconciled and saved before it replaces the data in memory. `resetDemoData()` restores the sample data |
+| Finance integrity | `src/data/store/finance-integrity.ts`, `finance-reconcile.ts` | `checkFinanceIntegrity()` validates every link and amount; `reconcileFinance()` posts rent and recurring charges and creates work-order bills (idempotent) |
 
 Route loaders call services, and pages derive what they display through selectors. To connect a real backend, change the service functions only; the components stay the same.
 
@@ -205,7 +219,7 @@ Route loaders call services, and pages derive what they display through selector
 - **Expiry never vacates a unit:** when an active lease passes its end date it shows as *Holdover* and the unit stays occupied. Only **End lease** releases the unit. A pending lease past its start date shows *Move-in due* until **Mark as moved in** or **Cancel lease**.
 - **Atomic changes:** every write runs in a transaction (`updateDatabase`) that updates the tenant, lease, unit, property totals and history together, or nothing at all if a check fails.
 - **Tenant status:** Active if they have an active lease, Pending if only a pending one, otherwise Past. A past tenant can start a new lease from Edit tenant.
-- **Payment history:** generated from the lease terms with a hash of the lease and month, so amounts and statuses don’t change on refresh. It is labelled “Demo data”. Replace `generateRentLedger` with your payments API.
+- **Payment history:** the tenant's stored Finance charges and payments (`getTenantFinance`). Rent is posted monthly from the lease terms; see [`docs/finance.md`](docs/finance.md).
 
 ### Maintenance rules
 
@@ -232,11 +246,23 @@ Route loaders call services, and pages derive what they display through selector
   - Rates and averages need at least 3 eligible jobs (`MIN_JOBS_FOR_RATES`); totals need 1. Otherwise the page shows “Not enough data”.
 - **Missing references:** if a work order points at a vendor id that no longer exists, Maintenance shows “Unknown vendor” as plain text with no link.
 
+### Finance rules
+
+Summarised here; [`docs/finance.md`](docs/finance.md) has the full rules.
+
+- **Cash basis:** income collected and expenses paid are counted by payment date, and net cash flow = collected − paid. Billed (by due date) and incurred (by bill date) are shown separately. Comparisons with a previous period appear only when that period is fully inside Finance history.
+- **Amounts** are integer cents in one configurable currency (two-decimal ISO 4217 codes; `updateFinanceSettings`, no settings screen in v0.8).
+- **Payments:** partial allowed, never above the balance, never in the future and never before the charge's issue date. Voided with a reason, never edited or deleted.
+- **Late fees:** residential $50.00 fixed; commercial 5 % of the full rent charge, rounded to the cent. Rent only, added by hand, after the 5-day grace period, while a balance is open, and one late-fee record per rent charge (a voided fee still counts).
+- **Reconciliation** never changes a charge with a payment, adjustment or void, never touches payments, and creates each work-order bill once.
+- **Storage:** budget 5,000,000 characters; warning at 60 %, critical at 80 %, saves refused at 95 %. Nothing is deleted automatically.
+
 ### Demo data
 
 - 18 vendors: the 15 from v0.6 (ids unchanged) with company names and notes added, plus three new ones that exercise the vendor rules: **Northstar Painting Co.** (active, no jobs, so it can be deleted and shows “Not enough data”), **Lakeside Locksmiths** (active, same phone number as SecureLock Co.) and **Prairie HVAC Partners** (inactive, no jobs).
 - Two vendors are inactive: Rapid Rooter Drains and Prairie HVAC Partners.
 - No requests or work orders were added in v0.7, so Maintenance figures are unchanged. MR-1005 shows a reassignment (Propwise In-house Team → Apex Door Systems).
+- **Finance history is synthetic:** 12 months of fictional charges, payments, fees and bills for the original sample records only, each flagged `demo` and shown with a “Demo” badge. It follows the v0.7 sample payment history (same ids, amounts, due dates and, for almost every month, payment dates) and is not real or verified payment data. Sample rent and recurring charges are issued 3 days before they're due (never before the lease starts) so early sample payments don't predate their charge. Records you create never get invented history.
 
 ### Storage migration
 
@@ -247,15 +273,20 @@ Saved data is upgraded automatically on first load, one step at a time, and ever
 
 - **v3 → v4 (from v0.6):** vendors gain `company`, `notes`, `deactivatedAt`, `createdAt` and `updatedAt`. Only missing fields are filled; stored names, contacts, categories and active status are kept. A `vendorEvents` collection is added with a “created” event for each vendor and a “deactivated” event for inactive ones (fixed ids `vev_<vendorId>_created` / `_deactivated`). The three new demo vendors are added unless a vendor with the same id, name or email already exists. Properties, units, tenants, leases, requests, work orders and maintenance activity are not touched.
 
-Because every id is fixed, running the migration again never creates duplicates. The upgraded data is saved immediately. If an upgrade fails, the stored data is left untouched and the app runs on sample data without saving for that session; the upgrade is retried on the next load.
+- **v4 → v5 (from v0.7):** Finance is added: charges, payments, expenses, recurring charges, Finance events and settings, plus counters for the new references. Every v4 collection is carried over unchanged. Rent is posted from lease terms for the 12 months up to the upgrade, completed work orders with a final cost get a bill, and synthetic history is added for the original sample records only. The result must pass `checkFinanceIntegrity()` before it is saved. The v0.7 Payments tab stored nothing, so there was no payment data to migrate.
+
+Because every id is fixed, running the migration again never creates duplicates. The upgraded data is saved immediately. If an upgrade fails, the stored data is left untouched and the app runs on sample data in read-only mode for that session (the storage banner says so, and every change is refused); the upgrade is retried on the next load.
 
 ### Known limitations
 
-- The Dashboard keeps its fixed sample snapshot. Vendors, properties and requests added in the app don't change its figures.
+- The Dashboard keeps its original fixed sample data and isn't connected to Finance or the other modules, so its revenue, payment and maintenance figures differ from theirs.
+- Finance records payments only: no payment processing, bank feeds, invoices, credits, refunds, prepayments, partial bill payments, proration, multi-currency, accrual or tax accounting, and no settings screen for currency or Finance rules.
+- Finance history starts 12 months before the data was created; there's no archiving yet (planned for v0.9) and no custom date range in Transactions.
 - Vendor performance is calculated from work orders in this browser's demo store only; there is no rating, review or invoice data.
 - Vendor documents, insurance and licence tracking, availability calendars, rate cards and a vendor portal are not included.
 - Maintenance activity entries keep the vendor name used at the time as plain text; they don't link to the vendor.
-- All data is stored in `localStorage` in one browser. Clearing site data (or calling `resetDemoData()`) restores the sample data.
+- All data is stored in `localStorage` in one browser, within a 5,000,000-character budget. Clearing site data (or calling `resetDemoData()`) restores the sample data.
+- Sample Finance history isn't refreshed, so newly posted months become due and overdue as time passes.
 
 ## Theming
 

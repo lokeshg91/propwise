@@ -11,6 +11,7 @@ import { RouteErrorBoundary } from '@/app/routes/route-error-boundary'
 import { propertyHandles } from '@/features/properties/properties.handles'
 import { maintenanceHandles } from '@/features/maintenance/maintenance.handles'
 import { tenantHandles } from '@/features/tenants/tenants.handles'
+import { financeHandles } from '@/features/finance/finance.handles'
 import { vendorHandles } from '@/features/vendors/vendors.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
@@ -76,12 +77,12 @@ export const routes: RouteObject[] = [
                 handle: propertyHandles.detail,
                 shouldRevalidate: skipSearchParamRevalidation,
                 lazy: async () => {
-                  const [{ PropertyDetailsPage }, { propertyDetailLoader }, { PropertyRouteError }] = await Promise.all([
+                  const [{ PropertyDetailsPage }, { propertyDetailsLoader }, { PropertyRouteError }] = await Promise.all([
                     import('@/features/properties/pages/property-details-page'),
                     import('@/features/properties/properties.loaders'),
                     import('@/features/properties/components/property-route-error'),
                   ])
-                  return { Component: PropertyDetailsPage, loader: propertyDetailLoader, ErrorBoundary: PropertyRouteError }
+                  return { Component: PropertyDetailsPage, loader: propertyDetailsLoader, ErrorBoundary: PropertyRouteError }
                 },
               },
               {
@@ -259,9 +260,96 @@ export const routes: RouteObject[] = [
           {
             path: 'finance',
             handle: navHandle('/finance'),
-            lazy: async () => ({
-              Component: (await import('@/features/finance/pages/finance-page')).FinancePage,
-            }),
+            shouldRevalidate: skipSearchParamRevalidation,
+            lazy: async () => {
+              const [{ FinanceLayout }, { financeLayoutLoader }] = await Promise.all([
+                import('@/features/finance/pages/finance-layout'),
+                import('@/features/finance/finance.loaders'),
+              ])
+              return { Component: FinanceLayout, loader: financeLayoutLoader }
+            },
+            children: [
+              {
+                index: true,
+                lazy: async () => {
+                  const [{ FinanceOverviewPage }, { financeOverviewLoader }] = await Promise.all([
+                    import('@/features/finance/pages/finance-overview-page'),
+                    import('@/features/finance/finance.loaders'),
+                  ])
+                  return { Component: FinanceOverviewPage, loader: financeOverviewLoader }
+                },
+              },
+              {
+                path: 'transactions',
+                handle: financeHandles.transactions,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ TransactionsPage }, { transactionsLoader }] = await Promise.all([
+                    import('@/features/finance/pages/transactions-page'),
+                    import('@/features/finance/finance.loaders'),
+                  ])
+                  return { Component: TransactionsPage, loader: transactionsLoader }
+                },
+              },
+              {
+                path: 'income/new',
+                handle: financeHandles.newIncome,
+                lazy: async () => {
+                  const [{ IncomeCreatePage }, { financeFormLoader }] = await Promise.all([
+                    import('@/features/finance/pages/income-create-page'),
+                    import('@/features/finance/finance.loaders'),
+                  ])
+                  return { Component: IncomeCreatePage, loader: financeFormLoader }
+                },
+              },
+              {
+                path: 'expenses/new',
+                handle: financeHandles.newExpense,
+                lazy: async () => {
+                  const [{ ExpenseCreatePage }, { financeFormLoader }] = await Promise.all([
+                    import('@/features/finance/pages/expense-create-page'),
+                    import('@/features/finance/finance.loaders'),
+                  ])
+                  return { Component: ExpenseCreatePage, loader: financeFormLoader }
+                },
+              },
+              {
+                path: 'transactions/:transactionId/edit',
+                handle: financeHandles.edit,
+                lazy: async () => {
+                  const [{ TransactionEditPage }, { transactionEditLoader }, { FinanceRouteError }] = await Promise.all([
+                    import('@/features/finance/pages/transaction-edit-page'),
+                    import('@/features/finance/finance.loaders'),
+                    import('@/features/finance/components/finance-route-error'),
+                  ])
+                  return { Component: TransactionEditPage, loader: transactionEditLoader, ErrorBoundary: FinanceRouteError }
+                },
+              },
+              {
+                path: 'transactions/:transactionId',
+                handle: financeHandles.detail,
+                lazy: async () => {
+                  const [{ TransactionDetailPage }, { transactionDetailLoader }, { FinanceRouteError }] = await Promise.all([
+                    import('@/features/finance/pages/transaction-detail-page'),
+                    import('@/features/finance/finance.loaders'),
+                    import('@/features/finance/components/finance-route-error'),
+                  ])
+                  return { Component: TransactionDetailPage, loader: transactionDetailLoader, ErrorBoundary: FinanceRouteError }
+                },
+              },
+              {
+                path: 'receivables',
+                handle: financeHandles.receivables,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ ReceivablesPage }, { receivablesLoader }] = await Promise.all([
+                    import('@/features/finance/pages/receivables-page'),
+                    import('@/features/finance/finance.loaders'),
+                  ])
+                  return { Component: ReceivablesPage, loader: receivablesLoader }
+                },
+              },
+            ],
           },
           {
             path: 'reports',

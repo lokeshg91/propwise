@@ -42,17 +42,3 @@ export interface Lease {
   createdAt: string
   updatedAt: string
 }
-
-/** A monthly rent charge in the generated demo ledger. */
-export interface RentCharge {
-  id: string
-  leaseId: string
-  /** "YYYY-MM" */
-  period: string
-  dueDate: string
-  amount: number
-  status: 'paid' | 'overdue' | 'scheduled' | 'pending'
-  paidAt: string | null
-  /** Paid after the due date. */
-  late: boolean
-}

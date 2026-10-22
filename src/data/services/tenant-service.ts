@@ -1,6 +1,5 @@
 import { daysBetween, monthsBetween, todayIso } from '@/data/domain/dates'
 import { getPrimaryLease, getTenantStatus, isCurrentLease } from '@/data/domain/lease-rules'
-import { generateRentLedger } from '@/data/mock/rent-ledger'
 import {
   assertUnitAvailable,
   currentLeaseForUnit,
@@ -18,7 +17,6 @@ import {
   type LeaseAssignmentInput,
   type LeaseEndReason,
   type Property,
-  type RentCharge,
   type Tenant,
   type TenantEvent,
   type TenantEventKind,
@@ -42,8 +40,6 @@ export interface TenantDetail extends TenantListItem {
   /** All leases, newest first. */
   leases: Array<Lease & { propertyName: string; unitNumber: string; /** e.g. "Unit 204" or "Suite 310". */ unitLabel: string }>
   events: TenantEvent[]
-  /** Demo ledger for the primary lease (generated sample records). */
-  ledger: RentCharge[]
 }
 
 export interface AssignableProperty {
@@ -101,7 +97,6 @@ export function getTenantDetail(id: string): Promise<TenantDetail | null> {
         }
       }),
     events: db.tenantEvents.filter((event) => event.tenantId === id),
-    ledger: item.lease ? generateRentLedger(item.lease) : [],
   })
 }
 

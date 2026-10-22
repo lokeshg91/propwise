@@ -1,7 +1,6 @@
 import {
   type LeaseDisplayStatus,
   type LeaseEndReason,
-  type RentCharge,
   type TenantKind,
   type TenantStatus,
 } from '@/types'
@@ -61,20 +60,6 @@ export const LEASE_END_REASON_LABELS: Record<LeaseEndReason, string> = {
   'early-termination': 'Early termination',
   transfer: 'Transferred to another property',
   other: 'Other',
-}
-
-export const RENT_CHARGE_LABELS: Record<RentCharge['status'], string> = {
-  paid: 'Paid',
-  overdue: 'Overdue',
-  scheduled: 'Scheduled',
-  pending: 'Upcoming',
-}
-
-export const RENT_CHARGE_TONES: Record<RentCharge['status'], BadgeTone> = {
-  paid: 'success',
-  overdue: 'danger',
-  scheduled: 'neutral',
-  pending: 'info',
 }
 
 export const unitPrefixFor = (propertyType: 'residential' | 'commercial') =>

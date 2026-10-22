@@ -86,7 +86,7 @@ export function TenantDetailsPage() {
           <TenantLeaseTab detail={detail} leaseStatus={leaseStatus} onAction={setAction} />
         </TabsContent>
         <TabsContent value="payments">
-          <TenantPaymentsTab detail={detail} />
+          <TenantPaymentsTab finance={detail.finance} tenantId={tenant.id} onSaved={() => void revalidator.revalidate()} />
         </TabsContent>
         <TabsContent value="activity">
           <Card>

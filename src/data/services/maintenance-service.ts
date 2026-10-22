@@ -1,5 +1,6 @@
 import { todayIso, toIsoDate } from '@/data/domain/dates'
 import { isCurrentLease } from '@/data/domain/lease-rules'
+import { expenseStatus, type ExpenseStatus } from '@/data/domain/finance-rules'
 import {
   availableActions,
   checkTransition,
@@ -52,6 +53,8 @@ export interface RequestListItem {
 export interface WorkOrderWithVendor extends WorkOrder {
   /** Shown even if the vendor has since become inactive. `missing` when the id no longer resolves. */
   vendor: Pick<Vendor, 'id' | 'name' | 'active' | 'phone' | 'email' | 'contactName'> & { missing: boolean }
+  /** The Finance bill created when the work order was completed with a final cost. */
+  bill: { id: string; reference: string; status: ExpenseStatus; amountCents: number; money: { currency: string; locale: string } } | null
 }
 
 export interface RequestDetail extends RequestListItem {
@@ -137,6 +140,11 @@ export function getServiceRequests(filter: RequestFilter = {}): Promise<RequestL
   return simulateLatency(listRequestItems(readDatabase(), filter))
 }
 
+function billFor(db: DemoDatabase, workOrderId: string): WorkOrderWithVendor['bill'] {
+  const bill = db.expenses.find((expense) => expense.workOrderId === workOrderId)
+  return bill ? { id: bill.id, reference: bill.reference, status: expenseStatus(bill, todayIso()), amountCents: bill.amountCents, money: { currency: db.finance.currency, locale: db.finance.locale } } : null
+}
+
 export function getServiceRequestDetail(id: string): Promise<RequestDetail | null> {
   const db = readDatabase()
   const request = db.serviceRequests.find((entry) => entry.id === id)
@@ -146,7 +154,7 @@ export function getServiceRequestDetail(id: string): Promise<RequestDetail | nul
   const unitReturn = applicable && request.unitId ? canReturnUnitToVacant(db, request.unitId, request.id) : { allowed: false }
   return simulateLatency({
     ...item,
-    workOrders: ordersFor(db, id).map((order) => ({ ...order, vendor: vendorName(db, order.vendorId) })),
+    workOrders: ordersFor(db, id).map((order) => ({ ...order, vendor: vendorName(db, order.vendorId), bill: billFor(db, order.id) })),
     events: eventsFor(db, id),
     actions: availableActions(request, { hasActiveWorkOrder: item.activeWorkOrder !== null }),
     unitReturn: { ...unitReturn, applicable: applicable && request.unitId !== null && findUnit(db, request.unitId).status === 'maintenance' },

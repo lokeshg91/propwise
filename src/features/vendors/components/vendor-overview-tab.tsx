@@ -11,7 +11,7 @@ import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import { CategoryChips } from '@/features/vendors/components/vendor-badges'
 import { VendorPerformanceCard } from '@/features/vendors/components/vendor-performance-card'
 import { locationText } from '@/features/vendors/lib/vendor-detail'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatMoney } from '@/lib/format'
 
 const linkClass = 'rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
 
@@ -118,6 +118,7 @@ export function VendorOverviewTab({ detail, onShowWorkOrders }: { detail: Vendor
 
       <div className="flex min-w-0 flex-col gap-4">
         <VendorPerformanceCard performance={performance} />
+        <VendorBillsCard detail={detail} />
         <Card>
           <CardHeader>
             <CardTitle>Jobs</CardTitle>
@@ -137,6 +138,58 @@ export function VendorOverviewTab({ detail, onShowWorkOrders }: { detail: Vendor
         </Card>
       </div>
     </div>
+  )
+}
+
+function VendorBillsCard({ detail }: { detail: VendorDetail }) {
+  const { vendor, bills } = detail
+  const money = (cents: number) => formatMoney(cents, bills.money)
+  const party = encodeURIComponent(`vendor:${vendor.id}`)
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bills</CardTitle>
+        <CardDescription>Finance bills paid to this vendor</CardDescription>
+        {bills.count > 0 ? (
+          <CardAction>
+            <Button asChild variant="ghost" size="sm">
+              <Link to={`/finance/transactions?party=${party}&kind=expense&range=all`}>
+                View bills
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {bills.count === 0 ? (
+          <p className="text-body text-muted-foreground">No bills yet. Completing a work order with a final cost creates one.</p>
+        ) : (
+          <>
+            <dl className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border p-3">
+                <dt className="text-caption text-muted-foreground">Paid</dt>
+                <dd className="mt-0.5 text-h3 text-foreground tabular-nums">{money(bills.paidCents)}</dd>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <dt className="text-caption text-muted-foreground">Unpaid</dt>
+                <dd className="mt-0.5 text-h3 text-foreground tabular-nums">{money(bills.unpaidCents)}</dd>
+                {bills.overdueCount > 0 ? <dd className="text-caption text-danger">{bills.overdueCount} overdue</dd> : null}
+              </div>
+            </dl>
+            <p className="text-caption text-muted-foreground">
+              {bills.count} {bills.count === 1 ? 'bill' : 'bills'}
+              {bills.voidCount > 0 ? `, ${bills.voidCount} void` : ''}. Performance figures above use work-order costs.
+            </p>
+          </>
+        )}
+        {vendor.active ? (
+          <Button asChild variant="outline" size="sm" className="self-start">
+            <Link to={`/finance/expenses/new?vendorId=${encodeURIComponent(vendor.id)}`}>Add bill</Link>
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
   )
 }
 

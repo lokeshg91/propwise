@@ -47,6 +47,42 @@ const compactCurrencyFormat = new Intl.NumberFormat('en-US', {
 
 const numberFormat = new Intl.NumberFormat('en-US')
 
+/** Currency used by Finance unless its settings say otherwise. */
+export const DEFAULT_CURRENCY = { currency: 'USD', locale: 'en-US' } as const
+
+export interface MoneyFormat {
+  currency: string
+  locale: string
+}
+
+const moneyFormats = new Map<string, Intl.NumberFormat>()
+function moneyFormatter(format: MoneyFormat, compact: boolean, whole: boolean): Intl.NumberFormat {
+  const key = `${format.locale}|${format.currency}|${compact}|${whole}`
+  let formatter = moneyFormats.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(format.locale, {
+      style: 'currency',
+      currency: format.currency,
+      ...(compact ? { notation: 'compact', maximumFractionDigits: 1 } : whole ? { maximumFractionDigits: 0 } : {}),
+    })
+    moneyFormats.set(key, formatter)
+  }
+  return formatter
+}
+
+/**
+ * Formats integer cents in the Finance currency, e.g. 125050 → "$1,250.50".
+ * Every Finance amount goes through this, so the symbol and separators come
+ * from the currency setting rather than being hardcoded.
+ */
+export function formatMoney(
+  cents: number,
+  format: MoneyFormat = DEFAULT_CURRENCY,
+  options: { compact?: boolean; whole?: boolean } = {},
+): string {
+  return moneyFormatter(format, options.compact ?? false, options.whole ?? false).format(cents / 100)
+}
+
 /** Formats USD, e.g. `$148,250` or compact `$148.3K`. */
 export function formatCurrency(value: number, options: { compact?: boolean } = {}): string {
   return options.compact ? compactCurrencyFormat.format(value) : currencyFormat.format(value)
@@ -110,4 +146,9 @@ export function formatTime(isoDate: string): string {
 /** "2026-10-24" → "Oct 24, 2026". */
 export function formatDate(isoDate: string): string {
   return parseCalendarDate(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** The currency symbol for the Finance setting, e.g. "$" or "€" (for input prefixes). */
+export function currencySymbol(format: MoneyFormat = DEFAULT_CURRENCY): string {
+  return new Intl.NumberFormat(format.locale, { style: 'currency', currency: format.currency }).formatToParts(0).find((part) => part.type === 'currency')?.value ?? format.currency
 }

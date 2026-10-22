@@ -29,7 +29,7 @@ export type { PropertyEvent, PropertyEventKind } from './property-event'
 export { PROPERTY_EVENT_KINDS } from './property-event'
 export type { CommercialUnitType, ResidentialUnitType, Unit, UnitInput, UnitStatus, UnitType } from './unit'
 export { COMMERCIAL_UNIT_TYPES, RESIDENTIAL_UNIT_TYPES, UNIT_STATUSES } from './unit'
-export type { Lease, LeaseDisplayStatus, LeaseEndReason, LeaseStatus, RentCharge } from './lease'
+export type { Lease, LeaseDisplayStatus, LeaseEndReason, LeaseStatus } from './lease'
 export { LEASE_DISPLAY_STATUSES, LEASE_END_REASONS, LEASE_STATUSES } from './lease'
 export type { EmergencyContact, MailingAddress, Tenant, TenantEvent, TenantEventKind, TenantKind, TenantStatus } from './tenant'
 export { TENANT_EVENT_KINDS, TENANT_KINDS, TENANT_STATUSES } from './tenant'
@@ -58,3 +58,20 @@ export {
 } from './service-request'
 export type { Vendor, VendorEvent, VendorEventKind, VendorInput, VendorV3 } from './vendor'
 export { VENDOR_EVENT_KINDS } from './vendor'
+export type {
+  Charge,
+  ChargeSource,
+  Expense,
+  ExpenseCategory,
+  ExpenseSource,
+  FinanceDemoScope,
+  FinanceEvent,
+  FinanceEventKind,
+  FinanceSettings,
+  IncomeCategory,
+  Payment,
+  PaymentMethod,
+  RecurringCategory,
+  RecurringCharge,
+} from './finance'
+export { EXPENSE_CATEGORIES, FINANCE_EVENT_KINDS, INCOME_CATEGORIES, PAYMENT_METHODS, RECURRING_CATEGORIES } from './finance'

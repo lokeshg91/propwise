@@ -1,3 +1,5 @@
+import { todayIso } from '@/data/domain/dates'
+import { expenseStatus } from '@/data/domain/finance-rules'
 import {
   findVendorConflicts,
   getVendorPerformance,
@@ -84,8 +86,36 @@ export interface VendorDetail {
   workOrders: VendorWorkOrder[]
   /** Newest first. */
   events: VendorEvent[]
-  /** False once any work order has referenced the vendor (any status). */
+  /** False once any work order or Finance bill has referenced the vendor (any status). */
   canDelete: boolean
+  /** Finance bills paid to the vendor (work-order bills and bills added in Finance). */
+  bills: VendorBills
+}
+
+export interface VendorBills {
+  count: number
+  paidCents: number
+  unpaidCents: number
+  overdueCount: number
+  voidCount: number
+  money: { currency: string; locale: string }
+}
+
+function vendorBills(db: DemoDatabase, vendorId: string): VendorBills {
+  const today = todayIso()
+  const bills: VendorBills = { count: 0, paidCents: 0, unpaidCents: 0, overdueCount: 0, voidCount: 0, money: { currency: db.finance.currency, locale: db.finance.locale } }
+  for (const expense of db.expenses) {
+    if (expense.vendorId !== vendorId) continue
+    bills.count += 1
+    const status = expenseStatus(expense, today)
+    if (status === 'void') bills.voidCount += 1
+    else if (status === 'paid') bills.paidCents += expense.amountCents
+    else {
+      bills.unpaidCents += expense.amountCents
+      if (status === 'overdue') bills.overdueCount += 1
+    }
+  }
+  return bills
 }
 
 /* ------------------------------------------------------------------ reads */
@@ -137,7 +167,8 @@ export function getVendorDetail(id: string): Promise<VendorDetail | null> {
     performance: performanceOf(db, id),
     workOrders: vendorWorkOrders(db, id),
     events: db.vendorEvents.filter((event) => event.vendorId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    canDelete: !isVendorReferenced(id, db.workOrders),
+    canDelete: !isVendorReferenced(id, db.workOrders) && !db.expenses.some((expense) => expense.vendorId === id),
+    bills: vendorBills(db, id),
   })
 }
 
@@ -230,6 +261,14 @@ export function deleteVendor(id: string): Promise<{ id: string; name: string }> 
         throw new ServiceError(
           'conflict',
           `${vendor.name} appears on ${references} ${references === 1 ? 'work order' : 'work orders'} and can’t be deleted. Deactivate the vendor instead.`,
+        )
+      }
+      // Finance bills keep pointing to the vendor too (Phase 8).
+      const bills = db.expenses.filter((expense) => expense.vendorId === id).length
+      if (bills > 0) {
+        throw new ServiceError(
+          'conflict',
+          `${vendor.name} appears on ${bills} ${bills === 1 ? 'bill' : 'bills'} in Finance and can’t be deleted. Deactivate the vendor instead.`,
         )
       }
       db.vendors = db.vendors.filter((entry) => entry.id !== id)

@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.8.0 — Finance module
+
+### Added
+- **Finance (`/finance`)** with Overview, Transactions and Receivables, all with filters kept in the URL. See [`docs/finance.md`](docs/finance.md).
+  - **Overview:** income collected, expenses paid, **net cash flow** and outstanding receivables (cash basis, with billed and incurred alongside); an income vs expenses chart; collections and aging; property performance; recent records, upcoming obligations, expenses by category and payables.
+  - **Transactions:** every charge and bill with type, status, category, property, date and tenant/vendor filters, search, totals, sorting and pagination.
+  - **Receivables:** open balances per tenant with aging (due today, 1–30, 31–60, 61–90, 90+ days).
+  - **Record pages:** amounts, payments (voided ones with their reasons), alerts, links to the tenant, property, vendor, request and work order, and a full history.
+- **Finance actions:** Add income (tenant or other payer, optional immediate payment, monthly recurring charges), Add bill (vendor or other payee, optional immediate payment), Edit, Record payment (partial allowed), Void payment, Adjust amount, Void charge, Add late fee, End recurring charge, Mark bill paid/unpaid, Void bill and Change due date for work-order bills. Every reason-based change is kept in the record's history.
+- **Late fees** from one central rule: residential $50.00 fixed, commercial 5 % of the full rent charge rounded to the cent; rent only, added by hand, after the 5-day grace period, while a balance is open, and **one late-fee record per rent charge** (a voided fee still counts).
+- **Duplicate protection:** repeated invoice numbers per payee are blocked; look-alike charges, payments and bills need confirmation.
+- **Storage banner** under the header on every page: warning at 60 % (can be hidden for the session), critical at 80 %, refused saves at 95 %, last save failed, and suspended (read-only after a failed upgrade, with Reload).
+- **Integrations:** the tenant Payments tab reads the Finance ledger; a Finance tab on property details; work-order bill links in Maintenance; a Bills card on vendor profiles; Finance links that open the tenant's Payments tab and the property's Finance tab.
+- **Currency:** one configurable currency (any two-decimal ISO 4217 code) with locale-aware formatting through `formatMoney`.
+
+### Changed
+- Saved data format v4 → **v5**, upgraded automatically on first load. Every v0.7 collection is carried over unchanged; Finance records and settings are added, and the result must pass the Finance integrity check before it is saved. A failed upgrade leaves the stored data untouched and makes the session read-only until reload.
+- The saved text uses a compact column format, so the full sample data uses about a quarter of the 5,000,000-character budget.
+- **Failed saves are never shown as successful:** if storage refuses a save, nothing changes in memory or on screen, the error is shown where the change was made, and the banner reports it. Earlier versions could keep an unsaved change in memory.
+- **Tenant Payments tab:** the ledger generated on every read (`generateRentLedger`) is replaced by the stored Finance ledger, labelled "Local demo records" for sample data. It keeps the v0.7 charge ids, amounts, due dates, outcomes and almost all payment dates. Months before the Finance history window (12 months up to the upgrade) aren't stored.
+- Vendors with Finance bills can't be deleted, and the delete dialog says why.
+
+### Demo data
+- 12 months of **synthetic** Finance history for the original sample records only, flagged as demo: rent and recurring charges, payments (including partial, late and instalment payments, an arrears tenant and a returned check), late fees, laundry income, operating bills and work-order bills. It is fictional, not verified payment history.
+- Sample rent and recurring charges are issued 3 days before their due date, never before the lease starts, so early sample payments keep their dates without predating their charge. Records you create use the standard issue date and never get invented history.
+
+### Unchanged
+- Dashboard and its fixed sample data. It isn't connected to Finance, so its revenue and payment figures differ.
+- Properties, Tenants, Maintenance and Vendors behaviour, apart from the Finance links and the tenant Payments tab above.
+- Dependencies.
+
 ## 0.7.0 — Vendors module
 
 ### Added

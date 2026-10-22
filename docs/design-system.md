@@ -112,6 +112,25 @@ Duplicate name or email notices use the danger tone (blocking); a duplicate phon
 
 Priority badges reuse the Dashboard's `MaintenancePriorityBadge` (urgent danger, high warning, medium info, low neutral). The due line under a status is red when overdue and amber when due soon, and always says so in words.
 
+### Finance status colours
+
+| Record | Status | Badge |
+| --- | --- | --- |
+| Charge | Pending | info |
+| Charge | Partially paid | warning |
+| Charge | Overdue | danger, with “Overdue by N days” in words |
+| Charge | Paid | success (“Paid late” noted in words when after the grace period) |
+| Charge / bill | Void | neutral, amount struck through, reason shown |
+| Bill | Pending | warning |
+| Bill | Overdue | danger |
+| Bill | Paid | success |
+| Payment | Received / Voided | success / neutral with the reason |
+| Projected rent | Scheduled | neutral |
+
+Sample records carry a neutral **Demo** badge. Aging buckets use token colours that darken with age (`AGING_COLORS`: info → warning → danger → danger mixed with foreground) and are always labelled with the bucket and amount, never colour alone.
+
+**Finance components:** `MoneyInput` (currency-symbol prefix, decimal keypad), `ActionDialog` (one Finance action; errors and duplicate confirmations stay in the dialog and the success toast only follows a completed save), `AgingBar`, `ChargeStatusBadge`, `ExpenseStatusBadge`, `DemoBadge`, `MoneyProvider`/`useMoney()` (the Finance currency outside the Finance section) and the app-shell `StorageBanner` (amber warning that can be hidden for the session; red critical, failed-save and read-only alerts that can't be dismissed).
+
 ## Charts
 
 - **Colours:** series use `chart-1`–`chart-5` through `CHART_COLORS`, so they switch with the theme automatically.

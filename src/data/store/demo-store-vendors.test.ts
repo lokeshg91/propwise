@@ -14,6 +14,7 @@ import {
   readDatabase,
   resetDemoData,
   SCHEMA_VERSION,
+  StorageError,
   updateDatabase,
 } from '@/data/store/demo-store'
 import { STORAGE_KEYS } from '@/lib/storage'
@@ -80,9 +81,11 @@ function storeRaw(value: unknown) {
 const stored = () => window.localStorage.getItem(STORAGE_KEYS.demoData)
 
 function expectV3Preserved(v3: DemoDatabaseV3, v4: DemoDatabase) {
-  for (const key of ['properties', 'units', 'events', 'tenants', 'leases', 'tenantEvents', 'serviceRequests', 'workOrders', 'maintenanceEvents', 'sequences'] as const) {
+  for (const key of ['properties', 'units', 'events', 'tenants', 'leases', 'tenantEvents', 'serviceRequests', 'workOrders', 'maintenanceEvents'] as const) {
     expect(v4[key]).toEqual(v3[key])
   }
+  // v5 adds finance reference counters next to the request counter.
+  expect(v4.sequences.request).toBe(v3.sequences.request)
   // Every v3 vendor keeps its id and every stored field.
   for (const vendor of v3.vendors) {
     const upgraded = v4.vendors.find((entry) => entry.id === vendor.id)
@@ -108,7 +111,7 @@ describe('fresh installation (v4)', () => {
   it('has the 15 original vendors unchanged, the 3 new vendors and their history', () => {
     const db = readDatabase()
     expect(db.version).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(4)
+    expect(SCHEMA_VERSION).toBe(5)
     expect(db.vendors).toHaveLength(18)
     for (const original of buildSeedVendors()) {
       const vendor = db.vendors.find((entry) => entry.id === original.id)
@@ -159,7 +162,7 @@ describe('Phase 6 (v3) → v4 migration', () => {
     const v3 = buildV3Snapshot()
     storeRaw(v3)
     const db = readDatabase()
-    expect(db.version).toBe(4)
+    expect(db.version).toBe(SCHEMA_VERSION)
     expectV3Preserved(v3, db)
 
     // Phase 6 edits survive: deactivated vendor stays inactive, edited phone kept.
@@ -180,7 +183,7 @@ describe('Phase 6 (v3) → v4 migration', () => {
     storeRaw(buildV3Snapshot())
     const first = readDatabase()
     const raw = stored()
-    expect(JSON.parse(raw ?? '{}').version).toBe(4)
+    expect(JSON.parse(raw ?? '{}').version).toBe(SCHEMA_VERSION)
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, raw ?? '')
     expect(readDatabase()).toEqual(first)
@@ -215,9 +218,13 @@ describe('Phase 6 (v3) → v4 migration', () => {
     readDatabase()
     expect(warn).toHaveBeenCalled()
     expect(isPersistenceSuspended()).toBe(true)
-    updateDatabase((draft) => {
-      draft.vendors[0] = { ...(draft.vendors[0] as DemoDatabase['vendors'][number]), name: 'Changed' }
-    })
+    // Saving is paused: a change is refused (no false success) and stored data stays untouched.
+    expect(() =>
+      updateDatabase((draft) => {
+        draft.vendors[0] = { ...(draft.vendors[0] as DemoDatabase['vendors'][number]), name: 'Changed' }
+      }),
+    ).toThrow(StorageError)
+    expect(readDatabase().vendors[0]?.name).not.toBe('Changed')
     expect(stored()).toBe(before)
     warn.mockRestore()
 
@@ -232,7 +239,7 @@ describe('older versions → v4', () => {
     const v2 = buildV2()
     storeRaw(v2)
     const db = readDatabase()
-    expect(db.version).toBe(4)
+    expect(db.version).toBe(SCHEMA_VERSION)
     for (const key of ['properties', 'units', 'tenants', 'leases'] as const) expect(db[key]).toEqual(v2[key])
     expect(db.vendors).toHaveLength(18)
     expect(db.serviceRequests.length).toBeGreaterThanOrEqual(55)
@@ -244,7 +251,7 @@ describe('older versions → v4', () => {
     const v1: DemoDatabaseV1 = { version: 1, properties, units: generateSeedUnits(properties), events: [] }
     storeRaw(v1)
     const db = readDatabase()
-    expect(db.version).toBe(4)
+    expect(db.version).toBe(SCHEMA_VERSION)
     expect(db.units).toEqual(v1.units)
     expect(db.tenants.length).toBeGreaterThan(300)
     expect(db.vendors).toHaveLength(18)

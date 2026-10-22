@@ -14,15 +14,16 @@ import { PropertyTimeline } from '@/features/properties/components/property-time
 import { PropertyUnitsTab } from '@/features/properties/components/property-units-tab'
 import { type UnitDialogState, UnitFormDialog } from '@/features/properties/components/unit-form-dialog'
 import { buildPropertyTimeline, getUnitStats } from '@/features/properties/lib/property-detail'
-import { type propertyDetailLoader } from '@/features/properties/properties.loaders'
+import { PropertyFinanceTab } from '@/features/properties/components/property-finance-tab'
+import { type propertyDetailsLoader } from '@/features/properties/properties.loaders'
 import { type Unit } from '@/types'
 
-const TABS = ['overview', 'units', 'activity', 'maintenance'] as const
+const TABS = ['overview', 'units', 'activity', 'maintenance', 'finance'] as const
 type DetailTab = (typeof TABS)[number]
 const isTab = (value: string | null): value is DetailTab => (TABS as readonly (string | null)[]).includes(value)
 
 export function PropertyDetailsPage() {
-  const detail = useLoaderData<typeof propertyDetailLoader>()
+  const detail = useLoaderData<typeof propertyDetailsLoader>()
   const { property, units } = detail
   const navigate = useNavigate()
   const revalidator = useRevalidator()
@@ -96,6 +97,9 @@ export function PropertyDetailsPage() {
                 <span className="rounded-full bg-muted px-1.5 text-caption text-muted-foreground tabular-nums">{openRequests}</span>
               ) : null}
             </TabsTrigger>
+            <TabsTrigger value="finance" className="px-1">
+              Finance
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -136,6 +140,9 @@ export function PropertyDetailsPage() {
             description={`Requests and work orders at ${property.name}`}
             reportHref={`/maintenance/new?propertyId=${property.id}`}
           />
+        </TabsContent>
+        <TabsContent value="finance">
+          <PropertyFinanceTab finance={detail.finance} propertyId={property.id} propertyName={property.name} />
         </TabsContent>
       </Tabs>
 

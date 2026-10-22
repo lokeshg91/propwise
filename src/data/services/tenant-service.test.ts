@@ -1,6 +1,5 @@
 import { addDays, addMonths, todayIso } from '@/data/domain/dates'
 import { getLeaseDisplayStatus, isCurrentLease } from '@/data/domain/lease-rules'
-import { generateRentLedger } from '@/data/mock/rent-ledger'
 import { getPropertyDetail, updateUnit } from '@/data/services/property-service'
 import { isServiceError } from '@/data/services/service-error'
 import {
@@ -80,11 +79,11 @@ describe('tenant service reads', () => {
     expect(active.every((item) => item.lease?.status === 'active' && item.property && item.unit)).toBe(true)
   })
 
-  it('returns details with lease history, events and a ledger', async () => {
+  it('returns details with lease history and events', async () => {
     const [first] = await getTenants()
     const detail = await getTenantDetail(first?.tenant.id ?? '')
     expect(detail?.leases.length).toBeGreaterThan(0)
-    expect(detail?.ledger.length).toBeGreaterThan(0)
+    expect(detail).not.toHaveProperty('ledger') // Payments come from the Finance ledger (getTenantFinance).
     expect(await getTenantDetail('nope')).toBeNull()
   })
 
@@ -292,38 +291,5 @@ describe('lease lifecycle', () => {
     await expectServiceError(updateUnit(unit.id, { ...input, rent: 2_500, status: 'occupied' }), 'rent')
     const detail = await getPropertyDetail(unit.propertyId)
     expect(detail?.currentLeases.some((lease) => lease.unitId === unit.id)).toBe(true)
-  })
-})
-
-describe('demo rent ledger', () => {
-  it('is deterministic for the same lease', () => {
-    const lease = readDatabase().leases.find((entry) => entry.status === 'active') as Lease
-    expect(generateRentLedger(lease, today)).toEqual(generateRentLedger(lease, today))
-    expect(generateRentLedger(lease, today)).toEqual(generateRentLedger(structuredClone(lease), today))
-  })
-
-  it('charges the lease rent once per month from the start date', () => {
-    const lease: Lease = {
-      id: 'lease_test',
-      tenantId: 't',
-      propertyId: 'p',
-      unitId: 'u',
-      startDate: '2026-01-15',
-      endDate: '2027-01-14',
-      monthlyRent: 1_500,
-      securityDeposit: 1_500,
-      paymentDueDay: 1,
-      status: 'active',
-      endedAt: null,
-      endReason: null,
-      createdAt: '',
-      updatedAt: '',
-    }
-    const ledger = generateRentLedger(lease, '2026-06-10')
-    // Feb–Jul (Jan 1 is before the start date; Jul is the upcoming charge).
-    expect(ledger.map((charge) => charge.period)).toEqual(['2026-07', '2026-06', '2026-05', '2026-04', '2026-03', '2026-02'])
-    expect(ledger.every((charge) => charge.amount === 1_500)).toBe(true)
-    expect(['scheduled', 'pending']).toContain(ledger[0]?.status)
-    expect(ledger.slice(1).every((charge) => charge.status !== 'scheduled')).toBe(true)
   })
 })

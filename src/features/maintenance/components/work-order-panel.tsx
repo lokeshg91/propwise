@@ -1,4 +1,5 @@
 import { ArrowRightLeft, CalendarClock, ClipboardList, UserCheck } from 'lucide-react'
+import { Link } from 'react-router'
 
 import { DetailList } from '@/components/shared/detail-list'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -7,13 +8,30 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { type RequestAction } from '@/data/domain/maintenance-rules'
 import { type RequestDetail, type WorkOrderWithVendor } from '@/data/services'
+import { ExpenseStatusBadge } from '@/features/finance/components/finance-badges'
 import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
 import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import { replacedOrderOf, replacementOf } from '@/features/maintenance/lib/work-order-history'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatMoney } from '@/lib/format'
 
 const money = (value: number | null) => (value === null ? '—' : formatCurrency(value))
+
+/** Link to the Finance bill a completed work order created, with its status in words. */
+function BillLink({ order }: { order: WorkOrderWithVendor }) {
+  if (order.status !== 'completed') return null
+  if (!order.bill) return <span className="text-muted-foreground">No bill: the final cost wasn’t recorded</span>
+  const { bill } = order
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <Link to={`/finance/transactions/${bill.id}`} className="rounded-sm font-medium text-foreground tabular-nums outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
+        {bill.reference}
+      </Link>
+      <span className="tabular-nums">{formatMoney(bill.amountCents, bill.money)}</span>
+      <ExpenseStatusBadge status={bill.status} />
+    </span>
+  )
+}
 
 /** "Reassigned to X" on a replaced work order, or "Took over from X" on its replacement. */
 function ReassignmentNote({ label, order }: { label: string; order: WorkOrderWithVendor | null }) {
@@ -86,6 +104,7 @@ export function WorkOrderPanel({ detail, onAction }: { detail: RequestDetail; on
                     </span>
                   ),
                 },
+                ...(latest.status === 'completed' ? [{ label: 'Bill', value: <BillLink order={latest} /> }] : []),
                 ...(latest.notes ? [{ label: 'Notes', value: latest.notes }] : []),
               ]}
             />
@@ -155,7 +174,14 @@ export function WorkOrderPanel({ detail, onAction }: { detail: RequestDetail; on
                       </TableCell>
                       <TableCell className="pr-5 text-right tabular-nums">
                         {order.status === 'completed' ? (
-                          money(order.actualCost)
+                          <span className="flex flex-col items-end gap-0.5">
+                            {money(order.actualCost)}
+                            {order.bill ? (
+                              <Link to={`/finance/transactions/${order.bill.id}`} className="rounded-sm text-caption text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 outline-none">
+                                Bill {order.bill.reference}
+                              </Link>
+                            ) : null}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">{order.estimatedCost === null ? '—' : `Est. ${money(order.estimatedCost)}`}</span>
                         )}

@@ -14,6 +14,7 @@ import {
   readDatabase,
   resetDemoData,
   SCHEMA_VERSION,
+  StorageError,
   updateDatabase,
 } from '@/data/store/demo-store'
 import { STORAGE_KEYS } from '@/lib/storage'
@@ -221,11 +222,14 @@ describe('Phase 5 (v2) → current migration', () => {
     expect(warn).toHaveBeenCalled()
     expect(stored()).toBe(before)
     expect(isPersistenceSuspended()).toBe(true)
-    // The session runs on sample data, and edits don't overwrite the stored Phase 5 data.
+    // The session runs on sample data and doesn't overwrite the stored Phase 5 data.
     expect(db.version).toBe(SCHEMA_VERSION)
-    updateDatabase((draft) => {
-      draft.properties[0] = { ...(draft.properties[0] as DemoDatabase['properties'][number]), name: 'Changed' }
-    })
+    // Saving is paused: a change is refused (no false success) and stored data stays untouched.
+    expect(() =>
+      updateDatabase((draft) => {
+        draft.properties[0] = { ...(draft.properties[0] as DemoDatabase['properties'][number]), name: 'Changed' }
+      }),
+    ).toThrow(StorageError)
     expect(stored()).toBe(before)
     warn.mockRestore()
 

@@ -188,13 +188,15 @@ describe('Tenant details and lease management', () => {
     expect(readDatabase().units.find((unit) => unit.id === lease.unitId)?.status).toBe('vacant')
   })
 
-  it('labels the payment history as demo data', async () => {
+  it('shows payments from the stored Finance ledger, labelled as local demo records', async () => {
+    // Phase 8 (Decision 5): the generated v0.7 ledger was replaced by the stored Finance ledger.
     const lease = leaseWhere((entry) => entry.status === 'active')
     const tenant = tenantOf(lease)
     renderApp(`/tenants/${tenant?.id}?tab=payments`)
-    expect(await screen.findByText('Demo data')).toBeInTheDocument()
-    expect(screen.getByText(/Generated sample records\. Propwise doesn’t process payments/)).toBeInTheDocument()
-    expect(screen.getByRole('table', { name: /rent charges/i })).toBeInTheDocument()
+    expect(await screen.findByText('Local demo records')).toBeInTheDocument()
+    expect(screen.getByText(/Propwise records payments; it doesn’t process them/)).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: /charges billed to this tenant/i })).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: /payments received from this tenant/i })).toBeInTheDocument()
   })
 
   it('links the property unit to the tenant profile', async () => {

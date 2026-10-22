@@ -5,6 +5,7 @@ import { type appLayoutLoader } from '@/app/layouts/app-layout.loader'
 import { AppHeader } from '@/app/layouts/components/app-header'
 import { AppSidebar } from '@/app/layouts/components/app-sidebar'
 import { MobileNav } from '@/app/layouts/components/mobile-nav'
+import { StorageBanner } from '@/app/layouts/components/storage-banner'
 import { getActiveHandle } from '@/app/routes/route-handle'
 import { isBoolean, usePersistedState } from '@/hooks/use-persisted-state'
 import { STORAGE_KEYS } from '@/lib/storage'
@@ -52,6 +53,7 @@ export function AppLayout() {
           onOpenMobileNav={() => setMobileNavOpen(true)}
           onMarkAllRead={markAllRead}
         />
+        <StorageBanner />
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           <Outlet />
         </main>

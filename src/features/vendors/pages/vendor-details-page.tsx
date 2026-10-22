@@ -165,7 +165,14 @@ export function VendorDetailsPage() {
         description={
           detail.canDelete
             ? 'This vendor has never been assigned a work order. Deleting removes the vendor and its activity permanently.'
-            : `${vendor.name} appears on ${detail.workOrders.length} ${detail.workOrders.length === 1 ? 'work order' : 'work orders'}${statusCounts.completed || statusCounts.cancelled ? ` (${[statusCounts.completed ? `${statusCounts.completed} completed` : '', statusCounts.cancelled ? `${statusCounts.cancelled} cancelled or reassigned` : '', openJobs.length ? `${openJobs.length} open` : ''].filter(Boolean).join(', ')})` : ''}. Those records must keep pointing to this vendor, so it can’t be deleted.${vendor.active ? ' Deactivate it instead to stop new assignments.' : ' It’s already inactive, so it can’t receive new work orders.'}`
+            : `${vendor.name} appears on ${[
+                detail.workOrders.length > 0
+                  ? `${detail.workOrders.length} ${detail.workOrders.length === 1 ? 'work order' : 'work orders'}${statusCounts.completed || statusCounts.cancelled ? ` (${[statusCounts.completed ? `${statusCounts.completed} completed` : '', statusCounts.cancelled ? `${statusCounts.cancelled} cancelled or reassigned` : '', openJobs.length ? `${openJobs.length} open` : ''].filter(Boolean).join(', ')})` : ''}`
+                  : '',
+                detail.bills.count > 0 ? `${detail.bills.count} ${detail.bills.count === 1 ? 'bill' : 'bills'} in Finance` : '',
+              ]
+                .filter(Boolean)
+                .join(' and ')}. Those records must keep pointing to this vendor, so it can’t be deleted.${vendor.active ? ' Deactivate it instead to stop new assignments.' : ' It’s already inactive, so it can’t receive new work orders or bills.'}`
         }
         confirmLabel="Delete permanently"
         cancelLabel={detail.canDelete ? 'Cancel' : 'Got it'}
