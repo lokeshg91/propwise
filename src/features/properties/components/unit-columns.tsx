@@ -1,11 +1,11 @@
 import { Pencil } from 'lucide-react'
 
+import { FormattedAmount, FormattedNumber } from '@/components/shared/formatted'
 import { IconButton } from '@/components/shared/icon-button'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { UnitStatusBadge } from '@/features/properties/components/unit-status-badge'
 import { UnitTenant } from '@/features/properties/components/unit-tenant'
 import { UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber } from '@/lib/format'
 import { type PropertyDetail } from '@/data/services'
 import { type Unit } from '@/types'
 
@@ -42,14 +42,18 @@ export function createUnitColumns(onEdit: (unit: Unit) => void) {
     column.accessor('areaSqft', {
       header: 'Size',
       meta: { align: 'end' },
-      cell: (info) => `${formatNumber(info.getValue())} sq ft`,
+      cell: (info) => (
+        <>
+          <FormattedNumber value={info.getValue()} /> sq ft
+        </>
+      ),
     }),
     column.accessor('rent', {
       header: 'Rent / mo',
       meta: { align: 'end' },
       cell: (info) => (
         <span className="block">
-          <span className="block font-medium text-foreground">{formatCurrency(info.getValue())}</span>
+          <span className="block font-medium text-foreground"><FormattedAmount value={info.getValue()} /></span>
           {info.row.original.status === 'occupied' ? null : (
             <span className="block text-caption text-muted-foreground">Asking</span>
           )}

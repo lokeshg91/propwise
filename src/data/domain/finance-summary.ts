@@ -1,8 +1,8 @@
 import { addDays } from '@/data/domain/dates'
 import { addPeriods, firstDayOf, lastDayOf, periodOf, periodRange } from '@/data/domain/finance-schedule'
-import { agingBucket, chargeState, emptyAging, expenseStatus, isActivePayment, paymentsByCharge, type AgingBucket } from '@/data/domain/finance-rules'
+import { agingBucket, chargeState, emptyAging, expenseStatus, graceFor, isActivePayment, paymentsByCharge, type AgingBucket } from '@/data/domain/finance-rules'
 import { ratioPercent, sumCents, toCents } from '@/data/domain/money'
-import { type Charge, type Expense, type ExpenseCategory, type Lease, type Payment, type Property, type Unit, type WorkOrder } from '@/types'
+import { type Charge, type Expense, type ExpenseCategory, type FinanceSettings, type Lease, type Payment, type Property, type Unit, type WorkOrder } from '@/types'
 
 /**
  * Finance figures as pure functions over a snapshot of records. Headline
@@ -49,7 +49,8 @@ export interface FinanceSnapshot {
   units: readonly Unit[]
   leases: readonly Lease[]
   workOrders: readonly WorkOrder[]
-  graceDays: number
+  /** Rule versions; each charge uses the one in force on its due date. */
+  rules: FinanceSettings['rules']
 }
 
 /** Properties a view is limited to; `null` means all. */
@@ -116,7 +117,7 @@ export function receivablesFor(snapshot: FinanceSnapshot, today: string, scope: 
   const position: ReceivablesPosition = { outstandingCents: 0, overdueCents: 0, aging: emptyAging(), oldestOverdueDays: 0, openCharges: 0 }
   for (const charge of snapshot.charges) {
     if (charge.voidedAt || !inScope(scope, charge.propertyId) || charge.dueDate > today) continue
-    const state = chargeState(charge, payments.get(charge.id), today, snapshot.graceDays)
+    const state = chargeState(charge, payments.get(charge.id), today, graceFor(snapshot, charge))
     if (state.balanceCents === 0) continue
     position.outstandingCents += state.balanceCents
     position.openCharges += 1
@@ -251,7 +252,7 @@ export function upcomingObligations(
   const items: UpcomingItem[] = []
   for (const charge of snapshot.charges) {
     if (charge.voidedAt || !inScope(scope, charge.propertyId) || charge.dueDate < today || charge.dueDate > until) continue
-    const state = chargeState(charge, payments.get(charge.id), today, snapshot.graceDays)
+    const state = chargeState(charge, payments.get(charge.id), today, graceFor(snapshot, charge))
     if (state.balanceCents > 0) items.push({ kind: 'charge', date: charge.dueDate, amountCents: state.balanceCents, charge })
   }
   for (const entry of projected) {

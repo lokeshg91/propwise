@@ -1,4 +1,4 @@
-import { formatCurrency, formatNumber, formatPercent } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 interface PropertySummaryProps {
   summary: { properties: number; units: number; occupied: number; occupancyRate: number; monthlyRevenue: number }
@@ -6,6 +6,7 @@ interface PropertySummaryProps {
 
 /** Compact totals for the current filter selection. */
 export function PropertySummary({ summary }: PropertySummaryProps) {
+  const { amount: formatCurrency, number: formatNumber, percent: formatPercent } = useFormat()
   const items = [
     { label: 'Properties', value: formatNumber(summary.properties) },
     { label: 'Total units', value: formatNumber(summary.units) },

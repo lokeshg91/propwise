@@ -6,11 +6,12 @@ import { TransactionParty, TransactionStatus } from '@/features/finance/componen
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
 import { categoryLabel } from '@/features/finance/lib/transaction-list'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 /** Card layout for the transactions list on tablet and mobile. */
 export function TransactionCard({ row }: { row: TransactionRow }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   const isVoid = (row.kind === 'income' ? row.state.status : row.status) === 'void'
   return (

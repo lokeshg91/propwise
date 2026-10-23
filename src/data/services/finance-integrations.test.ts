@@ -3,7 +3,7 @@
  * and maintenance work orders.
  */
 import { addDays, addMonths } from '@/data/domain/dates'
-import { chargeState, paymentsByCharge } from '@/data/domain/finance-rules'
+import { chargeState, graceFor, paymentsByCharge } from '@/data/domain/finance-rules'
 import { receivablesFor, resolveRange, totalsFor } from '@/data/domain/finance-summary'
 import { expectedRentCharge, periodRange } from '@/data/domain/finance-schedule'
 import { DEMO_INVOICE_LEAD_DAYS } from '@/data/mock/finance-seed'
@@ -105,7 +105,7 @@ describe('tenant Payments tab: stored Finance ledger', () => {
         compared += 1
         expect(charge.amountCents).toBe(Math.round(old.amount * 100))
         expect(charge.dueDate).toBe(old.dueDate)
-        const state = chargeState(charge, payments.get(charge.id), TODAY, data.finance.graceDays)
+        const state = chargeState(charge, payments.get(charge.id), TODAY, graceFor(data.finance, charge))
         // v0.7 called a payment "late" when it came after the due date; Finance only after the grace period.
         // Compare on v0.7's definition, using the stored payment dates.
         const lastPaid = (payments.get(charge.id) ?? []).filter((payment) => !payment.voidedAt).map((payment) => payment.receivedOn).sort().at(-1)

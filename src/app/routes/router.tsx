@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 
 import { AppLayout } from '@/app/layouts/app-layout'
 import { appLayoutLoader } from '@/app/layouts/app-layout.loader'
+import { FixedFormatProvider } from '@/app/providers/settings-provider'
 import { AuthLayout } from '@/app/layouts/auth-layout'
 import { navHandle, type RouteHandle } from '@/app/routes/route-handle'
 import { AppLoadingScreen } from '@/app/routes/app-loading-screen'
@@ -47,7 +48,13 @@ export const routes: RouteObject[] = [
                 import('@/features/dashboard/pages/dashboard-page'),
                 import('@/features/dashboard/dashboard.loader'),
               ])
-              return { Component: DashboardPage, loader: dashboardLoader }
+              // The Dashboard keeps its fixed sample data and USD / en-US formatting, whatever the workspace settings.
+              const FixedDashboard = () => (
+                <FixedFormatProvider>
+                  <DashboardPage />
+                </FixedFormatProvider>
+              )
+              return { Component: FixedDashboard, loader: dashboardLoader }
             },
           },
           {
@@ -354,9 +361,55 @@ export const routes: RouteObject[] = [
           {
             path: 'reports',
             handle: navHandle('/reports'),
-            lazy: async () => ({
-              Component: (await import('@/features/reports/pages/reports-page')).ReportsPage,
-            }),
+            children: [
+              {
+                index: true,
+                lazy: async () => {
+                  const [{ ReportsPage }, { reportsHubLoader }] = await Promise.all([import('@/features/reports/pages/reports-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: ReportsPage, loader: reportsHubLoader }
+                },
+              },
+              {
+                path: 'income-expense',
+                handle: { title: 'Income & Expense', section: 'Main', parent: { label: 'Reports', to: '/reports' } } satisfies RouteHandle,
+                lazy: async () => {
+                  const [{ IncomeExpensePage }, { incomeExpenseLoader }] = await Promise.all([import('@/features/reports/pages/income-expense-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: IncomeExpensePage, loader: incomeExpenseLoader }
+                },
+              },
+              {
+                path: 'rent-collection',
+                handle: { title: 'Rent Collection', section: 'Main', parent: { label: 'Reports', to: '/reports' } } satisfies RouteHandle,
+                lazy: async () => {
+                  const [{ RentCollectionPage }, { rentCollectionLoader }] = await Promise.all([import('@/features/reports/pages/rent-collection-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: RentCollectionPage, loader: rentCollectionLoader }
+                },
+              },
+              {
+                path: 'receivables',
+                handle: { title: 'Receivables & Aging', section: 'Main', parent: { label: 'Reports', to: '/reports' } } satisfies RouteHandle,
+                lazy: async () => {
+                  const [{ ReceivablesReportPage }, { receivablesLoader }] = await Promise.all([import('@/features/reports/pages/receivables-report-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: ReceivablesReportPage, loader: receivablesLoader }
+                },
+              },
+              {
+                path: 'property-performance',
+                handle: { title: 'Property performance', section: 'Main', parent: { label: 'Reports', to: '/reports' } } satisfies RouteHandle,
+                lazy: async () => {
+                  const [{ PropertyPerformancePage }, { propertyPerformanceLoader }] = await Promise.all([import('@/features/reports/pages/property-performance-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: PropertyPerformancePage, loader: propertyPerformanceLoader }
+                },
+              },
+              {
+                path: 'maintenance-expenses',
+                handle: { title: 'Maintenance expenses', section: 'Main', parent: { label: 'Reports', to: '/reports' } } satisfies RouteHandle,
+                lazy: async () => {
+                  const [{ MaintenanceReportPage }, { maintenanceLoader }] = await Promise.all([import('@/features/reports/pages/maintenance-report-page'), import('@/features/reports/reports.loaders')])
+                  return { Component: MaintenanceReportPage, loader: maintenanceLoader }
+                },
+              },
+            ],
           },
           {
             path: 'staff',
@@ -376,9 +429,14 @@ export const routes: RouteObject[] = [
           {
             path: 'settings',
             handle: navHandle('/settings'),
-            lazy: async () => ({
-              Component: (await import('@/features/settings/pages/settings-page')).SettingsPage,
-            }),
+            shouldRevalidate: skipSearchParamRevalidation,
+            lazy: async () => {
+              const [{ SettingsPage }, { settingsLoader }] = await Promise.all([
+                import('@/features/settings/pages/settings-page'),
+                import('@/features/settings/settings.loaders'),
+              ])
+              return { Component: SettingsPage, loader: settingsLoader }
+            },
           },
           {
             path: '*',

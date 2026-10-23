@@ -2,10 +2,11 @@ import { CalendarClock, KeyRound, UsersRound, Wallet } from 'lucide-react'
 
 import { KpiCard } from '@/features/dashboard/components/kpi-card'
 import { type TenantSummary } from '@/features/tenants/lib/tenant-list'
-import { formatCurrency, formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Portfolio-wide tenant metrics (not affected by list filters). */
 export function TenantMetrics({ summary }: { summary: TenantSummary }) {
+  const { amount: formatCurrency, number: formatNumber } = useFormat()
   return (
     <section aria-label="Tenant metrics" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <KpiCard

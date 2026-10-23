@@ -18,7 +18,7 @@ import { VendorOverviewTab } from '@/features/vendors/components/vendor-overview
 import { VendorWorkOrdersTable } from '@/features/vendors/components/vendor-work-orders-table'
 import { buildVendorTimeline } from '@/features/vendors/lib/vendor-detail'
 import { type vendorDetailLoader } from '@/features/vendors/vendors.loaders'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 const TABS = ['overview', 'work-orders', 'activity'] as const
 type DetailTab = (typeof TABS)[number]
@@ -34,7 +34,8 @@ export function VendorDetailsPage() {
   const tab: DetailTab = isTab(tabParam) ? tabParam : 'overview'
   const [action, setAction] = useState<VendorAction | null>(null)
 
-  const timeline = useMemo(() => buildVendorTimeline(detail), [detail])
+  const { amount, date: formatDate } = useFormat()
+  const timeline = useMemo(() => buildVendorTimeline(detail, amount), [detail, amount])
   const openJobs = detail.workOrders.filter((entry) => isActiveWorkOrder(entry.order))
   const statusCounts = {
     completed: detail.workOrders.filter((entry) => entry.order.status === 'completed').length,

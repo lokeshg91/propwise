@@ -13,7 +13,6 @@ import {
 import { type ActivityItem, type ActivityTone } from '@/components/shared/activity-timeline'
 import { isActiveWorkOrder } from '@/data/domain/maintenance-rules'
 import { type VendorDetail, type VendorWorkOrder } from '@/data/services'
-import { formatCurrency } from '@/lib/format'
 import { type VendorEventKind } from '@/types'
 
 export const WORK_ORDER_GROUPS = ['ongoing', 'completed', 'cancelled', 'all'] as const
@@ -49,7 +48,7 @@ const EVENT_STYLES: Record<VendorEventKind, { icon: LucideIcon; tone: ActivityTo
  * Vendor history: profile events (which keep the name the vendor had at the
  * time) plus job milestones from its work orders. Newest first.
  */
-export function buildVendorTimeline(detail: Pick<VendorDetail, 'vendor' | 'events' | 'workOrders'>): ActivityItem[] {
+export function buildVendorTimeline(detail: Pick<VendorDetail, 'vendor' | 'events' | 'workOrders'>, amount: (value: number) => string): ActivityItem[] {
   const items: ActivityItem[] = detail.events.map((event) => ({
     id: event.id,
     title: event.title,
@@ -73,7 +72,7 @@ export function buildVendorTimeline(detail: Pick<VendorDetail, 'vendor' | 'event
       items.push({
         id: `${order.id}-completed`,
         title: `Completed ${request?.id ?? order.requestId}`,
-        description: order.actualCost !== null ? `Final cost ${formatCurrency(order.actualCost)}.` : 'No final cost recorded.',
+        description: order.actualCost !== null ? `Final cost ${amount(order.actualCost)}.` : 'No final cost recorded.',
         createdAt: order.completedAt,
         icon: CircleCheckBig,
         tone: 'success',

@@ -1,13 +1,13 @@
 import { Link } from 'react-router'
 
+import { FormattedAmount } from '@/components/shared/formatted'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
+import { LeaseDateLine } from '@/features/tenants/components/lease-date-line'
 import { TenantActionsMenu } from '@/features/tenants/components/tenant-actions-menu'
 import { TenantAvatar } from '@/features/tenants/components/tenant-avatar'
 import { LeaseStatusBadge, TenantStatusBadge } from '@/features/tenants/components/tenant-badges'
-import { leaseDateLine } from '@/features/tenants/lib/lease-dates'
 import { type TenantRow } from '@/features/tenants/lib/tenant-list'
 import { TENANT_STATUS_LABELS } from '@/features/tenants/lib/tenant-meta'
-import { formatCurrency } from '@/lib/format'
 
 const column = createDataTableColumnHelper<TenantRow>()
 
@@ -63,7 +63,13 @@ export const tenantColumns = column.columns([
     header: 'Rent / mo',
     meta: { align: 'end' },
     cell: (info) =>
-      info.getValue() > 0 ? <span className="font-medium text-foreground">{formatCurrency(info.getValue())}</span> : '—',
+      info.getValue() > 0 ? (
+        <span className="font-medium text-foreground">
+          <FormattedAmount value={info.getValue()} />
+        </span>
+      ) : (
+        '—'
+      ),
   }),
   // Sorts by the key date: lease end, or move-in for pending leases.
   column.accessor((row) => row.keyDate ?? '', {
@@ -77,7 +83,7 @@ export const tenantColumns = column.columns([
         <span className="flex flex-col items-start gap-1">
           <LeaseStatusBadge status={row.leaseStatus} />
           <span className="text-caption text-muted-foreground">
-            {leaseDateLine(row.leaseStatus, { start: row.leaseStart, end: row.leaseEnd, endedAt: row.keyDate })}
+            <LeaseDateLine status={row.leaseStatus} dates={{ start: row.leaseStart, end: row.leaseEnd, endedAt: row.keyDate }} />
           </span>
         </span>
       )

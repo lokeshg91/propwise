@@ -2,10 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { type FinanceTotals, type ReceivablesPosition } from '@/data/domain/finance-summary'
 import { AgingBar } from '@/features/finance/components/aging-bar'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatPercent } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Billed vs collected for charges due in the period, and open balances by age. */
 export function CollectionsCard({ totals, receivables }: { totals: FinanceTotals; receivables: ReceivablesPosition }) {
+  const { percent: formatPercent } = useFormat()
   const money = useMoney()
   const rate = totals.collectionRate
   return (

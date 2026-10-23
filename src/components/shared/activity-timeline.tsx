@@ -1,7 +1,8 @@
 import { History, type LucideIcon } from 'lucide-react'
 
 import { EmptyState } from '@/components/shared/empty-state'
-import { formatRelativeTime, formatTime } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
+import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export type ActivityTone = 'primary' | 'info' | 'success' | 'warning' | 'danger' | 'neutral'
@@ -25,15 +26,15 @@ const TONES: Record<ActivityTone, string> = {
   neutral: 'bg-muted text-muted-foreground',
 }
 
-const dayFormat = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-
-function dayLabel(iso: string, now = new Date()): string {
+/** "Today", "Yesterday" or the local calendar day, e.g. "October 24, 2026" (in the workspace region). */
+function dayLabel(iso: string, longDate: (isoDate: string) => string, now = new Date()): string {
   const date = new Date(iso)
   const startOf = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
   const diff = Math.round((startOf(now) - startOf(date)) / 86_400_000)
   if (diff === 0) return 'Today'
   if (diff === 1) return 'Yesterday'
-  return dayFormat.format(date)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return longDate(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`)
 }
 
 interface ActivityTimelineProps {
@@ -51,6 +52,7 @@ export function ActivityTimeline({
   emptyTitle = 'No activity yet',
   emptyDescription = 'Changes will appear here.',
 }: ActivityTimelineProps) {
+  const { longDate } = useFormat()
   if (items.length === 0) {
     return <EmptyState size="sm" icon={History} title={emptyTitle} description={emptyDescription} />
   }
@@ -59,7 +61,7 @@ export function ActivityTimeline({
 
   const groups = new Map<string, ActivityItem[]>()
   for (const item of items) {
-    const label = dayLabel(item.createdAt)
+    const label = dayLabel(item.createdAt, longDate)
     groups.set(label, [...(groups.get(label) ?? []), item])
   }
 
@@ -76,6 +78,7 @@ export function ActivityTimeline({
 }
 
 function TimelineList({ items, timeStyle }: { items: ActivityItem[]; timeStyle: 'relative' | 'clock' }) {
+  const { time: formatTime } = useFormat()
   return (
     <ol className="flex flex-col gap-5">
       {items.map((item, index) => {

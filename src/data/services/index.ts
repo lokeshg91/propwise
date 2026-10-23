@@ -117,3 +117,63 @@ export type {
   TransactionDetail,
   TransactionRow,
 } from './finance-service'
+
+export {
+  addRuleVersion,
+  CURRENCY_CHANGE_NOTE,
+  CURRENCY_OPTIONS,
+  currencyName,
+  getSettings,
+  readFormatters,
+  REGION_OPTIONS,
+  regionName,
+  REPORT_RANGE_LABELS,
+  subscribeSettings,
+  updateCurrency,
+  updateGeneralSettings,
+  updatePaymentTerms,
+  updateRegion,
+} from './settings-service'
+export type { RuleVersionInput, WorkspaceSettings } from './settings-service'
+export {
+  backupFileName,
+  compareVersions,
+  countWorkspaceRecords,
+  createBackup,
+  getWorkspaceSummary,
+  inspectBackup,
+  prepareBackupDownload,
+  RECORD_TYPE_LABELS,
+  RECORD_TYPES,
+  resetWorkspaceData,
+  restoreBackup,
+  serializeBackup,
+  totalOf,
+  WorkspaceChangeError,
+} from './backup-service'
+export type { BackupInspection, WorkspaceChangeResult, RecordCounts, RecordType, WorkspaceBackup, WorkspaceCounts, WorkspaceSummary } from './backup-service'
+export {
+  buildIncomeExpense,
+  buildMaintenance,
+  buildPropertyPerformance,
+  buildReceivables,
+  buildRentCollection,
+  getIncomeExpenseReport,
+  getMaintenanceReport,
+  getPropertyPerformanceReport,
+  getReceivablesReport,
+  getRentCollectionReport,
+  getReportProperties,
+} from './report-service'
+export type {
+  IncomeExpenseResult,
+  MaintenanceFilters,
+  MaintenanceResult,
+  PropertyPerformanceResult,
+  ReceivablesFilters,
+  ReceivablesResult,
+  RentCollectionFilters,
+  RentCollectionResult,
+  ReportFilters,
+  ReportMeta,
+} from './report-service'

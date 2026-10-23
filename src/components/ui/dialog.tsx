@@ -47,19 +47,75 @@ function DialogOverlay({
   )
 }
 
+const DIALOG_CONTENT = "[data-slot=\"dialog-content\"]"
+
+/**
+ * The element that had focus when the dialog opened, and a close handler that
+ * returns focus to it. Radix returns focus to a `DialogTrigger`; dialogs
+ * opened from state (no trigger) would otherwise leave focus on the page body.
+ * - A caller's `onCloseAutoFocus` runs first; if it calls `preventDefault()`,
+ *   focus is left to the caller.
+ * - Radix's own handling runs next (it focuses the trigger when there is one).
+ * - Only if focus then ended up nowhere (the body) is it moved back to the
+ *   invoking element, and only while that element is still in the document.
+ */
+function useReturnFocus(onOpenAutoFocus: ((event: Event) => void) | undefined, onCloseAutoFocus: ((event: Event) => void) | undefined) {
+  const returnTo = React.useRef<HTMLElement | null>(null)
+  const lastOutside = React.useRef<HTMLElement | null>(null)
+  // The last element focused outside any dialog, for dialogs whose content focuses itself (autoFocus) before Radix's open event.
+  React.useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement && !event.target.closest(DIALOG_CONTENT)) lastOutside.current = event.target
+    }
+    document.addEventListener("focusin", onFocusIn, true)
+    return () => document.removeEventListener("focusin", onFocusIn, true)
+  }, [])
+  // Radix fires this just before it moves focus into the dialog, so the active element is normally still the invoking one.
+  const handleOpenAutoFocus = React.useCallback(
+    (event: Event) => {
+      const active = document.activeElement
+      const outside = active instanceof HTMLElement && active !== document.body && !active.closest(DIALOG_CONTENT)
+      returnTo.current = outside ? active : lastOutside.current
+      onOpenAutoFocus?.(event)
+    },
+    [onOpenAutoFocus]
+  )
+  const handleCloseAutoFocus = React.useCallback(
+    (event: Event) => {
+      onCloseAutoFocus?.(event)
+      // Radix skips the open event when the content already focused itself (autoFocus): use the last element focused outside.
+      const target = returnTo.current ?? lastOutside.current
+      returnTo.current = null
+      if (event.defaultPrevented) return
+      // After Radix has run its own handling (which focuses a DialogTrigger when there is one).
+      window.setTimeout(() => {
+        const active = document.activeElement
+        if (target && target.isConnected && (active === null || active === document.body)) target.focus({ preventScroll: true })
+      }, 0)
+    },
+    [onCloseAutoFocus]
+  )
+  return { handleOpenAutoFocus, handleCloseAutoFocus }
+}
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const { handleOpenAutoFocus, handleCloseAutoFocus } = useReturnFocus(onOpenAutoFocus, onCloseAutoFocus)
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-popover p-6 text-sm text-popover-foreground shadow-lg duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className

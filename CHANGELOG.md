@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.9.0 — Reports & Settings
+
+### Added
+- **Reports (`/reports`)**: a hub and five read-only reports built from the same Finance records and rules as the Finance pages, so every figure reconciles with them. See [`docs/reports.md`](docs/reports.md).
+  - **Income & Expense** (cash basis): income collected, expenses paid and net cash flow by month, income category and expense category, with billed and incurred as separate figures.
+  - **Rent Collection**: rent charges due in the period (optionally with recurring charges): billed, collected to date, outstanding, collection rate, and paid on time, paid late, partly paid and unpaid, by property and by tenant; rent received in the period shown separately.
+  - **Receivables & Aging** (as of today): every open balance in exactly one of six buckets — **Not yet due**, Due today, 1–30, 31–60, 61–90 and 90+ days — by tenant or payer and by property. The buckets add up to the total open balance, and the due part equals the Finance receivables.
+  - **Property performance**: per property, billed, collected, collection rate, expenses paid and incurred, net cash flow, maintenance paid, the open balance due today and current occupancy, with a totals row.
+  - **Maintenance expenses**: Finance bills only (work-order bills and bills in the Maintenance category, each counted once by bill id), on a paid or incurred basis, by property, vendor or payee and request category, with estimate vs actual. Completed work orders without a final cost are counted, never given an amount.
+  - **Filters** kept in the URL: period presets or a **custom from–to range** (up to 5 years, partial months labelled), property type, property, and record source (All, Sample, Created by you).
+  - **Export CSV** with typed columns (amounts stay numeric, including negatives), formula-injection protection on text cells only, UTF-8 with BOM and CRLF line ends.
+  - **Print / Save as PDF** through the browser's print dialog: light theme, no app chrome, filters printed, every row, repeated table headers.
+  - Wide tables scroll inside their box with a visible scrollbar, edge fades, a hint, a pinned first column and keyboard scrolling.
+- **Settings (`/settings`)** with four tabs, each saving on its own:
+  - **General:** theme, region (number and date format, with a live preview) and the default report period.
+  - **Finance:** workspace currency (curated list of two-decimal ISO 4217 codes) with a confirmation that amounts are **relabelled, not converted**, and bill payment terms.
+  - **Rent & late fees:** effective-dated rule versions (grace days, residential fee, commercial percentage) that start today or later; charges already due keep the rule they had. Past versions are listed.
+  - **Data & storage:** storage meter, **Download backup** (JSON), **Restore from backup** and **Reset workspace**, plus the settings change history.
+- **Backup, restore and reset:**
+  - A backup holds the saved data exactly as stored, with the app and saved-data versions and the theme and sidebar preferences.
+  - Restore validates the file (format, app, version, size), upgrades it through the normal migration chain, requires the Finance integrity check, downloads a backup of the current workspace first and asks you to type RESTORE. Any failure leaves the current data untouched.
+  - Reset recreates the sample workspace. It shows how many records you created, can't continue until a backup has been downloaded in the same dialog, and asks you to type RESET. Theme and sidebar preferences are kept.
+- **Transactions:** a **Custom range…** option with from and to dates kept in the URL.
+- **App-wide currency and region:** Properties, Tenants, Maintenance, Vendors, Finance and Reports use the workspace currency and region for amounts, inputs and dates.
+
+### Changed
+- Saved data format v5 → **v6**, upgraded automatically on first load. Every v0.8 collection is carried over unchanged; the v0.8 grace period and late fees become the first rule version with the same values, and workspace settings and an empty settings history are added. The result must pass the Finance integrity check, and every charge keeps the same status, balance and late-fee eligibility. A failed upgrade leaves the stored data untouched and makes the session read-only.
+- The `/reports` and `/settings` placeholders are now real pages.
+
+### Fixed
+- **Destructive buttons in dark mode** (Reset workspace, Cancel request, Void, Delete …) now meet WCAG AA text contrast: 4.9:1 at rest and 4.6:1 on hover (were 4.4:1 and 3.6:1). Light mode is unchanged.
+- **Dialogs return keyboard focus** to the button that opened them when they close (Escape, Cancel or a close button), as long as that button is still on the page, including dialogs opened from state and the page search. A dialog with its own trigger, or a caller that manages focus itself, keeps that behaviour.
+
+### Unchanged
+- The **Dashboard** keeps its code, fixed sample data, calculations and appearance (US dollars and en-US dates), also after a currency or region change.
+- Finance pages and their figures. The Finance Receivables page still shows amounts already due only (no Not yet due bucket).
+- No new dependencies.
+
+### Deferred
+- A selective "reset sample data only" (it can't be done safely with the current data model; see `docs/reports.md`), historical as-of aging, comparisons with a previous period in reports, generated PDF or Excel files, scheduled or emailed reports, saved report presets and a default landing page.
+- Multi-currency and conversion, per-property or per-lease rules, proration, credits and refunds; archiving settled history.
+
+### Known limitations
+- Receivables & Aging is as of today only. With the sample data, Not yet due is $0.00, because no posted sample charge is due after today.
+- Print uses the browser's dialog; reports with many columns print in small type on A4 portrait. On screen, wide tables scroll inside their box.
+- Changing the currency relabels amounts; activity history keeps the text it was written with, so earlier entries may still show "$".
+- A completed work order counts as "completed without a final cost" only when it was completed within the report period. Manual and operating maintenance bills appear under "Not linked to a request" by request category.
+- Restoring a backup keeps this browser's theme and sidebar preferences. "Backup downloaded" means the file was handed to the browser and checked as restorable.
+- Validation limit messages use en-US number grouping; all text is in English.
+- In light mode, a destructive button's **hover** state on the page background (not on a card) measures 4.4:1, just under 4.5:1; its resting state is 5.2:1. Unchanged from v0.8.
+
 ## 0.8.0 — Finance module
 
 ### Added

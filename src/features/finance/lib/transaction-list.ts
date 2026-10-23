@@ -1,6 +1,7 @@
 import { EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_LABELS } from '@/data/domain/finance-labels'
 import { type ChargeStatus, type ExpenseStatus } from '@/data/domain/finance-rules'
 import { FINANCE_RANGES, inWindow, resolveRange, type FinanceRange } from '@/data/domain/finance-summary'
+import { customRangeErrors } from '@/data/domain/report-range'
 import { type TransactionRow } from '@/data/services'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type ExpenseCategory, type IncomeCategory } from '@/types'
 
@@ -27,7 +28,8 @@ export function statusFiltersFor(kind: TransactionKind): TransactionStatusFilter
   return ['all', 'unpaid', 'overdue', 'paid', 'void']
 }
 
-export type TransactionRangeFilter = FinanceRange | 'all'
+/** Presets, all dates, or a custom range (`from`/`to`, Phase 9). */
+export type TransactionRangeFilter = FinanceRange | 'all' | 'custom'
 export const TRANSACTION_RANGES: TransactionRangeFilter[] = [...FINANCE_RANGES, 'all']
 
 export interface TransactionFilters extends Record<string, string> {
@@ -37,11 +39,14 @@ export interface TransactionFilters extends Record<string, string> {
   category: IncomeCategory | ExpenseCategory | 'all'
   property: string
   range: TransactionRangeFilter
+  /** Custom range dates (YYYY-MM-DD, inclusive), only with `range: 'custom'`. */
+  from: string
+  to: string
   /** `tenant:<id>` or `vendor:<id>`, set by links from tenant and vendor profiles. */
   party: string
 }
 
-export const DEFAULT_TRANSACTION_FILTERS: TransactionFilters = { q: '', kind: 'all', status: 'all', category: 'all', property: 'all', range: '3m', party: 'all' }
+export const DEFAULT_TRANSACTION_FILTERS: TransactionFilters = { q: '', kind: 'all', status: 'all', category: 'all', property: 'all', range: '3m', from: '', to: '', party: 'all' }
 
 const includes = <T extends string>(list: readonly T[], value: string): value is T => (list as readonly string[]).includes(value)
 
@@ -58,9 +63,25 @@ export function parseTransactionFilters(params: URLSearchParams): TransactionFil
     status: includes(statusFiltersFor(resolvedKind), status) ? status : 'all',
     category: includes(categories, category) ? category : 'all',
     property: params.get('property') || 'all',
-    range: includes(TRANSACTION_RANGES, range) ? range : DEFAULT_TRANSACTION_FILTERS.range,
+    ...parseRange(range, params.get('from') ?? '', params.get('to') ?? ''),
     party: /^(tenant|vendor):[\w-]+$/.test(params.get('party') ?? '') ? (params.get('party') as string) : 'all',
   }
+}
+
+/** A custom range is kept only when valid (a broken URL falls back to the default period). */
+function parseRange(range: string, from: string, to: string): Pick<TransactionFilters, 'range' | 'from' | 'to'> {
+  if (range === 'custom') {
+    const errors = customRangeErrors(from, to)
+    if (!errors.from && !errors.to) return { range: 'custom', from, to }
+  }
+  return { range: includes(TRANSACTION_RANGES, range) ? range : DEFAULT_TRANSACTION_FILTERS.range, from: '', to: '' }
+}
+
+/** The dates a range filter covers; null for all dates. */
+export function transactionWindow(filters: Pick<TransactionFilters, 'range' | 'from' | 'to'>, today: string): { from: string; to: string } | null {
+  if (filters.range === 'all') return null
+  if (filters.range === 'custom') return { from: filters.from, to: filters.to }
+  return resolveRange(filters.range, today)
 }
 
 export function categoriesFor(kind: TransactionKind): Array<IncomeCategory | ExpenseCategory> {
@@ -107,7 +128,7 @@ export function searchTextOf(row: TransactionRow): string {
 }
 
 export function filterTransactions(rows: readonly TransactionRow[], filters: TransactionFilters, today: string): TransactionRow[] {
-  const window = filters.range === 'all' ? null : resolveRange(filters.range, today)
+  const window = transactionWindow(filters, today)
   const query = filters.q.trim().toLowerCase()
   return rows.filter(
     (row) =>

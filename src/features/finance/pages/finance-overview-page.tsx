@@ -15,11 +15,12 @@ import { PropertyFinanceTable } from '@/features/finance/components/property-fin
 import { useUrlFilters } from '@/features/finance/hooks/use-url-filters'
 import { DEFAULT_OVERVIEW_FILTERS, parseOverviewFilters, type OverviewFilters } from '@/features/finance/lib/finance-filters'
 import { type financeOverviewLoader } from '@/features/finance/finance.loaders'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 const DEFAULTS: OverviewFilters = { ...DEFAULT_OVERVIEW_FILTERS }
 
 export function FinanceOverviewPage() {
+  const { date: formatDate } = useFormat()
   const { overview, properties } = useLoaderData<typeof financeOverviewLoader>()
   const { filters, setFilters } = useUrlFilters(DEFAULTS, parseOverviewFilters)
   const { range } = overview

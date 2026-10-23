@@ -3,21 +3,24 @@ import { properties as seedProperties } from '@/data/mock/properties'
 import { applyDemoAttentionStates, buildTenancyRecords } from '@/data/mock/tenancy-seed'
 import { generateSeedUnits } from '@/data/mock/units'
 import { todayIso } from '@/data/domain/dates'
-import { assertFinanceIntegrity } from '@/data/store/finance-integrity'
+import { assertFinanceIntegrity, assertSameFinanceOutcomes } from '@/data/store/finance-integrity'
 import { decodeDatabase, encodeDatabase, isEncodedDatabase } from '@/data/store/storage-codec'
 import { reconcileFinance } from '@/data/store/finance-reconcile'
-import { upgradeToV5 } from '@/data/store/finance-upgrade'
+import { addFinance, upgradeToV6 } from '@/data/store/finance-upgrade'
 import { upgradeVendors } from '@/data/store/vendor-upgrade'
 import { readStorage, removeStorage, STORAGE_KEYS, writeStorage } from '@/lib/storage'
 import {
+  type AppSettings,
   type Charge,
   type Expense,
   type FinanceDemoScope,
   type FinanceEvent,
   type FinanceSettings,
+  type FinanceSettingsV5,
   type Lease,
   type Payment,
   type RecurringCharge,
+  type SettingsEvent,
   type MaintenanceEvent,
   type Property,
   type PropertyEvent,
@@ -55,8 +58,18 @@ export interface DemoDatabase {
   recurringCharges: RecurringCharge[]
   financeEvents: FinanceEvent[]
   finance: FinanceSettings
+  /** Workspace preferences (Phase 9). */
+  appSettings: AppSettings
+  /** Changes made in Settings, oldest first (Phase 9). */
+  settingsEvents: SettingsEvent[]
   /** Next numbers for requests ("MR-<n>") and finance references ("INC-", "PAY-", "EXP-"). */
   sequences: { request: number; income: number; payment: number; expense: number }
+}
+
+/** Phase 8 (v0.8) storage shape: one inline rule, no workspace settings. */
+export interface DemoDatabaseV5 extends Omit<DemoDatabase, 'version' | 'finance' | 'appSettings' | 'settingsEvents'> {
+  version: 5
+  finance: FinanceSettingsV5
 }
 
 /** Phase 7 storage shape (no finance). */
@@ -92,7 +105,7 @@ export interface DemoDatabaseV3 extends Omit<DemoDatabaseV2, 'version'> {
   sequences: { request: number }
 }
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 let cache: DemoDatabase | null = null
 /**
@@ -101,10 +114,10 @@ let cache: DemoDatabase | null = null
  */
 let persistenceSuspended = false
 
-/** Fresh install: the sample data run through the same v4 and v5 steps that upgrade stored data. */
+/** Fresh install: the sample data run through the same v4 → current step that upgrades stored data. */
 function createSeed(now: Date = new Date()): DemoDatabase {
   const v4 = buildSeedV4(now)
-  return upgradeToV5(v4, now, scopeOf(v4))
+  return addFinance(v4, now, scopeOf(v4))
 }
 
 /** Everything in a fresh v4 seed is sample data. */
@@ -144,6 +157,33 @@ function canonicalScope(v4: DemoDatabaseV4, now: Date): FinanceDemoScope {
       })
       .map((order) => order.id),
   }
+}
+
+export const SAMPLE_COLLECTIONS = ['properties', 'units', 'tenants', 'leases', 'vendors', 'serviceRequests', 'workOrders'] as const
+export type SampleCollection = (typeof SAMPLE_COLLECTIONS)[number]
+
+let sampleIds: Record<SampleCollection, ReadonlySet<string>> | null = null
+
+/**
+ * Ids of the original sample records outside Finance (Finance records carry
+ * a `demo` flag instead). They're fixed or derived from the sample units, so
+ * they're the same on every install and every day.
+ */
+export function sampleRecordIds(): Record<SampleCollection, ReadonlySet<string>> {
+  if (!sampleIds) {
+    const seed = buildSeedV4(new Date())
+    const ids = (records: ReadonlyArray<{ id: string }>) => new Set(records.map((record) => record.id))
+    sampleIds = {
+      properties: ids(seed.properties),
+      units: ids(seed.units),
+      tenants: ids(seed.tenants),
+      leases: ids(seed.leases),
+      vendors: ids(seed.vendors),
+      serviceRequests: ids(seed.serviceRequests),
+      workOrders: ids(seed.workOrders),
+    }
+  }
+  return sampleIds
 }
 
 function buildSeedV4(now: Date): DemoDatabaseV4 {
@@ -194,9 +234,35 @@ function isV4(value: unknown): value is DemoDatabaseV4 {
   return isObject(value) && value.version === 4 && hasArrays(value, V4_KEYS) && isObject(value.sequences)
 }
 
-function isV5(value: unknown): value is DemoDatabase {
-  return isObject(value) && value.version === SCHEMA_VERSION && hasArrays(value, V5_KEYS) && isObject(value.sequences) && isObject(value.finance)
+function isV5(value: unknown): value is DemoDatabaseV5 {
+  return isObject(value) && value.version === 5 && hasArrays(value, V5_KEYS) && isObject(value.sequences) && isObject(value.finance)
 }
+
+function isV6(value: unknown): value is DemoDatabase {
+  return (
+    isObject(value) &&
+    value.version === SCHEMA_VERSION &&
+    hasArrays(value, [...V5_KEYS, 'settingsEvents']) &&
+    isObject(value.sequences) &&
+    isObject(value.finance) &&
+    Array.isArray(value.finance.rules) &&
+    isObject(value.appSettings)
+  )
+}
+
+/** The saved-data version of parsed data, or null when it isn't Propwise data in a known format. */
+export function savedDataVersion(value: unknown): number | null {
+  if (isV6(value)) return 6
+  if (isV5(value)) return 5
+  if (isV4(value)) return 4
+  if (isV3(value)) return 3
+  if (isV2(value)) return 2
+  if (isV1(value)) return 1
+  return null
+}
+
+/** True for data saved by a newer Propwise than this one. */
+export const isNewerVersion = (value: unknown): boolean => isObject(value) && typeof value.version === 'number' && value.version > SCHEMA_VERSION
 
 function nextRequestNumber(requests: ServiceRequest[], current = 0): number {
   return Math.max(current, FIRST_APP_REQUEST_NUMBER, ...requests.map((request) => requestNumber(request.id) + 1))
@@ -219,23 +285,36 @@ export const migrationHooks: { beforeCommit: (db: DemoDatabase) => void } = { be
  *   Every v4 collection is carried over unchanged; fictional history is only
  *   added for the original sample records. The result must pass the finance
  *   integrity check before it can be saved.
+ * - v5 → v6: the inline grace days and late fee become the first rule
+ *   version, and workspace settings and the settings history are added.
+ *   Every record is copied unchanged, and every charge must keep the same
+ *   status, balance, lateness and late-fee outcome.
  *
  * Record ids are fixed or derived from their source, so running the migration
  * again adds nothing. It works on a copy and returns a new object; the caller
  * saves it only if every step succeeds.
  */
 export function migrateDatabase(
-  data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3 | DemoDatabaseV4 | DemoDatabase,
+  data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3 | DemoDatabaseV4 | DemoDatabaseV5 | DemoDatabase,
   now: Date = new Date(),
 ): DemoDatabase {
   // Already current: nothing to add.
-  if (isV5(data)) return structuredClone(data)
+  if (isV6(data)) return structuredClone(data)
 
-  const v4 = isV4(data) ? structuredClone(data) : upgradeToV4(toV3(data, now), now)
-  const v5 = upgradeToV5(v4, now, canonicalScope(v4, now))
-  assertFinanceIntegrity(v5)
-  migrationHooks.beforeCommit(v5)
-  return v5
+  let current: DemoDatabase
+  if (isV5(data)) {
+    // v5 → v6 reshapes settings only. Every charge must keep exactly the same
+    // status, balance, lateness and late-fee outcome under the new rule model.
+    const v5 = structuredClone(data)
+    current = upgradeToV6(v5)
+    assertSameFinanceOutcomes(v5, current, todayIso(now))
+  } else {
+    const v4 = isV4(data) ? structuredClone(data) : upgradeToV4(toV3(data, now), now)
+    current = addFinance(v4, now, canonicalScope(v4, now))
+  }
+  assertFinanceIntegrity(current)
+  migrationHooks.beforeCommit(current)
+  return current
 }
 
 function toV3(data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3, now: Date): DemoDatabaseV3 {
@@ -417,13 +496,13 @@ function load(): DemoDatabase {
   } catch {
     return fresh() // Unreadable data can't be recovered; start fresh.
   }
-  if (isV5(parsed)) {
+  if (isV6(parsed)) {
     usedChars = charsFor(raw)
     // Post rent for a new month. Derived only, so if saving fails the same records are posted again next time.
     if (reconcileNow(parsed).changed) trySave(parsed)
     return parsed
   }
-  if (!isV1(parsed) && !isV2(parsed) && !isV3(parsed) && !isV4(parsed)) return fresh()
+  if (!isV1(parsed) && !isV2(parsed) && !isV3(parsed) && !isV4(parsed) && !isV5(parsed)) return fresh()
 
   try {
     const migrated = migrateDatabase(parsed)
@@ -459,9 +538,32 @@ function trySave(db: DemoDatabase) {
 }
 
 export function readDatabase(): DemoDatabase {
-  cache ??= load()
+  if (!cache) {
+    cache = load()
+    notifyDataSoon()
+  }
   return cache
 }
+
+/** The loaded database, or null before anything has read it (never triggers a load). */
+export function peekDatabase(): DemoDatabase | null {
+  return cache
+}
+
+const dataListeners = new Set<() => void>()
+
+/** Notifies after the data is loaded, after every committed change and after a reset (settings follow the store). */
+export function subscribeDatabase(listener: () => void): () => void {
+  dataListeners.add(listener)
+  return () => dataListeners.delete(listener)
+}
+
+function notifyData() {
+  for (const listener of dataListeners) listener()
+}
+
+// Loads can happen while React renders; tell listeners once that work is done.
+const notifyDataSoon = () => queueMicrotask(notifyData)
 
 /** True when saving is paused because stored data couldn't be upgraded. */
 export function isPersistenceSuspended(): boolean {
@@ -483,6 +585,7 @@ export function updateDatabase<T>(mutate: (db: DemoDatabase) => T): T {
   reconcileNow(draft)
   save(draft)
   cache = draft
+  notifyData()
   return result
 }
 
@@ -494,6 +597,38 @@ export function resetDemoData(): void {
   lastError = null
   removeStorage(STORAGE_KEYS.demoData)
   notify()
+  notifyData()
+}
+
+/**
+ * Replaces the whole workspace (restore from backup, Phase 9). `next` must
+ * already be a current, integrity-checked database. Finance is reconciled on
+ * a copy, the copy is saved, and only then does it replace the data in
+ * memory. If saving fails the stored data and the session stay exactly as
+ * they were (StorageError). Works in a read-only session too: replacing the
+ * data is the way out of it, and the user downloads a backup first.
+ * Device preferences (theme, sidebar) are separate keys and aren't touched.
+ */
+export function replaceWorkspace(next: DemoDatabase): void {
+  const draft = structuredClone(next)
+  reconcileNow(draft)
+  assertFinanceIntegrity(draft)
+  migrationHooks.beforeCommit(draft)
+  save(draft)
+  cache = draft
+  persistenceSuspended = false
+  notify()
+  notifyData()
+}
+
+/**
+ * Full workspace reset (Phase 9): deletes every record in this browser,
+ * including ones the user created, and saves a fresh sample workspace in
+ * one write. Success means the new workspace is saved. If saving fails,
+ * nothing changes (StorageError). Device preferences aren't touched.
+ */
+export function resetWorkspace(now: Date = new Date()): void {
+  replaceWorkspace(createSeed(now))
 }
 
 export function createId(prefix: string): string {

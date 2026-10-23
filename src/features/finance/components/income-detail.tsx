@@ -13,12 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { INCOME_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/data/domain/finance-labels'
 import { describeLateFeeRule } from '@/data/domain/finance-rules'
 import { type TransactionDetail } from '@/data/services'
+import { useFormat } from '@/hooks/use-format'
 import { type Payment } from '@/types'
 import { ChargeStatusBadge, DemoBadge } from '@/features/finance/components/finance-badges'
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
 import { toActivityItems } from '@/features/finance/lib/finance-timeline'
-import { formatDate, formatMonth } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 type IncomeDetailData = Extract<TransactionDetail, { kind: 'income' }>
@@ -34,6 +34,7 @@ interface IncomeDetailProps {
 }
 
 export function IncomeDetail({ detail, onAction, onVoidPayment }: IncomeDetailProps) {
+  const { date: formatDate, month: formatMonth } = useFormat()
   const money = useMoney()
   const { charge, state, payments, lease, tenant, property, unit } = detail
   const unitLabel = unit ? `${property?.type === 'commercial' ? 'Suite' : 'Unit'} ${unit.number}` : null
@@ -274,6 +275,7 @@ export function IncomeDetail({ detail, onAction, onVoidPayment }: IncomeDetailPr
 }
 
 function IncomeAlert({ detail }: { detail: IncomeDetailData }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   const { charge, state } = detail
   if (state.status === 'void') {
@@ -308,8 +310,9 @@ function IncomeAlert({ detail }: { detail: IncomeDetailData }) {
 }
 
 function LateFeeCard({ detail, onAdd }: { detail: IncomeDetailData; onAdd: () => void }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
-  const { lateFee, lateFeeAllowed, settings, property } = detail
+  const { lateFee, lateFeeAllowed, rule, property } = detail
   return (
     <Card className="min-w-0">
       <CardHeader>
@@ -342,7 +345,7 @@ function LateFeeCard({ detail, onAdd }: { detail: IncomeDetailData; onAdd: () =>
             {lateFeeAllowed.reason?.startsWith('The grace period') ? ` Available from ${formatDate(lateFeeAllowed.availableFrom)}.` : ''}
           </p>
         )}
-        <p className="text-caption text-muted-foreground">{describeLateFeeRule(settings, (cents) => money(cents))}</p>
+        <p className="text-caption text-muted-foreground">{describeLateFeeRule(rule, (cents) => money(cents))}</p>
       </CardContent>
     </Card>
   )

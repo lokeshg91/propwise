@@ -5,11 +5,13 @@ import {
   findChargeDuplicates,
   findExpenseDuplicates,
   findPaymentDuplicates,
+  graceFor,
   isActivePayment,
   LATE_FEE_BLOCK_REASONS,
   lateFeeAvailableFrom,
   lateFeeBlock,
   paymentsByCharge,
+  ruleFor,
   suggestedLateFeeCents,
   type ChargeState,
   type ExpenseStatus,
@@ -34,10 +36,11 @@ import {
   type FinanceSnapshot,
   type PropertyScope,
 } from '@/data/domain/finance-summary'
-import { isSupportedCurrency, isValidCents, toCents } from '@/data/domain/money'
+import { isValidCents, toCents } from '@/data/domain/money'
 import { createId, readDatabase, updateDatabase, type DemoDatabase } from '@/data/store/demo-store'
 import { nextReference, scheduleContext } from '@/data/store/finance-reconcile'
 import { ServiceError } from '@/data/services/service-error'
+import { applyCurrency, applyRegion } from '@/data/services/settings-service'
 import { simulateLatency } from '@/data/services/simulate-latency'
 import { formatMoney } from '@/lib/format'
 import {
@@ -45,6 +48,7 @@ import {
   type Expense,
   type ExpenseCategory,
   type FinanceEvent,
+  type FinanceRuleVersion,
   type FinanceSettings,
   type IncomeCategory,
   type Payment,
@@ -92,7 +96,7 @@ export function snapshotOf(db: DemoDatabase): FinanceSnapshot {
     units: db.units,
     leases: db.leases,
     workOrders: db.workOrders,
-    graceDays: db.finance.graceDays,
+    rules: db.finance.rules,
   }
 }
 
@@ -197,7 +201,7 @@ export function getTransactions(): Promise<TransactionRow[]> {
   const payments = paymentsByCharge(db.payments)
   const rows: TransactionRow[] = []
   for (const charge of db.charges) {
-    const state = chargeState(charge, payments.get(charge.id), today, db.finance.graceDays)
+    const state = chargeState(charge, payments.get(charge.id), today, graceFor(db.finance, charge))
     rows.push({
       kind: 'income',
       id: charge.id,
@@ -267,6 +271,8 @@ export type TransactionDetail =
       lateFee: Charge | null
       recurring: RecurringCharge | null
       lateFeeAllowed: { allowed: boolean; reason: string | null; suggestedCents: number; availableFrom: string }
+      /** The rule version in force on this charge's due date. */
+      rule: FinanceRuleVersion
       timeline: TimelineEntry[]
       settings: FinanceSettings
     }
@@ -289,13 +295,14 @@ export function getTransactionDetail(id: string): Promise<TransactionDetail | nu
   const charge = db.charges.find((entry) => entry.id === id)
   if (charge) {
     const payments = db.payments.filter((payment) => payment.chargeId === id).sort((a, b) => a.receivedOn.localeCompare(b.receivedOn))
-    const state = chargeState(charge, payments, today, db.finance.graceDays)
+    const state = chargeState(charge, payments, today, graceFor(db.finance, charge))
     const property = db.properties.find((entry) => entry.id === charge.propertyId) ?? null
     const lease = charge.leaseId ? (db.leases.find((entry) => entry.id === charge.leaseId) ?? null) : null
     // One late-fee record per rent charge, ever: a voided fee still counts (and is shown with its reason).
     const fees = db.charges.filter((entry) => entry.parentChargeId === id)
     const lateFee = fees.find((entry) => !entry.voidedAt) ?? fees.at(-1) ?? null
-    const block = lateFeeBlock(charge, state, today, db.finance.graceDays, fees.length > 0)
+    const rule = ruleFor(db.finance, charge.dueDate)
+    const block = lateFeeBlock(charge, state, today, rule.graceDays, fees.length > 0)
     return simulateLatency({
       kind: 'income',
       charge,
@@ -310,10 +317,11 @@ export function getTransactionDetail(id: string): Promise<TransactionDetail | nu
       recurring: charge.recurringId ? (db.recurringCharges.find((entry) => entry.id === charge.recurringId) ?? null) : null,
       lateFeeAllowed: {
         allowed: block === null,
-        reason: block === 'within-grace' ? `The grace period ends on ${addDays(charge.dueDate, db.finance.graceDays)}.` : block ? LATE_FEE_BLOCK_REASONS[block] : null,
-        availableFrom: lateFeeAvailableFrom(charge.dueDate, db.finance.graceDays),
-        suggestedCents: suggestedLateFeeCents(charge, property?.type ?? 'residential', db.finance),
+        reason: block === 'within-grace' ? `The grace period ends on ${addDays(charge.dueDate, rule.graceDays)}.` : block ? LATE_FEE_BLOCK_REASONS[block] : null,
+        availableFrom: lateFeeAvailableFrom(charge.dueDate, rule.graceDays),
+        suggestedCents: suggestedLateFeeCents(charge, property?.type ?? 'residential', rule),
       },
+      rule,
       timeline: chargeTimeline(db, charge, payments),
       settings: db.finance,
     } satisfies TransactionDetail)
@@ -382,7 +390,7 @@ export function getReceivables(): Promise<ReceivableRow[]> {
     const list = payments.get(charge.id) ?? []
     for (const payment of list) if (isActivePayment(payment) && (!row.lastPaymentOn || payment.receivedOn > row.lastPaymentOn)) row.lastPaymentOn = payment.receivedOn
     if (charge.voidedAt || charge.dueDate > today) continue
-    const state = chargeState(charge, list, today, db.finance.graceDays)
+    const state = chargeState(charge, list, today, graceFor(db.finance, charge))
     if (state.balanceCents === 0) continue
     row.balanceCents += state.balanceCents
     row.openCharges += 1
@@ -450,7 +458,7 @@ export function getTenantFinance(tenantId: string): Promise<TenantFinance> {
       const payments = [...(byCharge.get(charge.id) ?? [])].sort((a, b) => a.receivedOn.localeCompare(b.receivedOn) || a.reference.localeCompare(b.reference))
       return {
         charge,
-        state: chargeState(charge, payments, today, db.finance.graceDays),
+        state: chargeState(charge, payments, today, graceFor(db.finance, charge)),
         payments,
         unitLabel: names.unit(charge.unitId, charge.propertyId),
         propertyName: names.property(charge.propertyId),
@@ -712,13 +720,13 @@ export function addLateFee(chargeId: string): Promise<Charge> {
       const charge = findCharge(db, chargeId)
       const today = todayIso()
       const payments = db.payments.filter((payment) => payment.chargeId === chargeId)
-      const state = chargeState(charge, payments, today, db.finance.graceDays)
+      const state = chargeState(charge, payments, today, graceFor(db.finance, charge))
       // Voided fees count too: a rent charge gets at most one late-fee record.
       const existing = db.charges.some((entry) => entry.parentChargeId === chargeId)
-      const block = lateFeeBlock(charge, state, today, db.finance.graceDays, existing)
+      const block = lateFeeBlock(charge, state, today, graceFor(db.finance, charge), existing)
       if (block) throw new ServiceError('conflict', LATE_FEE_BLOCK_REASONS[block])
       const type = db.properties.find((property) => property.id === charge.propertyId)?.type ?? 'residential'
-      const fee = suggestedLateFeeCents(charge, type, db.finance)
+      const fee = suggestedLateFeeCents(charge, type, ruleFor(db.finance, charge.dueDate))
       const now = new Date().toISOString()
       const created: Charge = {
         id: createId('chg'),
@@ -924,17 +932,17 @@ export function voidExpense(id: string, reason: string): Promise<Expense> {
 }
 
 /** Currency and locale for Finance amounts (two-decimal currencies only). */
+/**
+ * Currency and region together (kept from v0.8). Settings uses
+ * `updateCurrency` and `updateRegion`; both record the change in the settings
+ * history. Amounts are relabelled, never converted.
+ */
 export function updateFinanceSettings(input: Pick<FinanceSettings, 'currency' | 'locale'>): Promise<FinanceSettings> {
   return run(() =>
     updateDatabase((db) => {
-      const currency = input.currency.trim().toUpperCase()
-      if (!isSupportedCurrency(currency)) throw new ServiceError('invalid', 'Choose a currency with two decimal places, e.g. USD, EUR or GBP.', 'currency')
-      try {
-        new Intl.NumberFormat(input.locale, { style: 'currency', currency })
-      } catch {
-        throw new ServiceError('invalid', 'Choose a valid locale, e.g. en-US.', 'locale')
-      }
-      Object.assign(db.finance, { currency, locale: input.locale })
+      const now = new Date().toISOString()
+      applyCurrency(db, input.currency, now)
+      applyRegion(db, input.locale, now)
       return db.finance
     }),
   )

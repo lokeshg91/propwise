@@ -8,13 +8,14 @@ import { TransactionParty, TransactionStatus } from '@/features/finance/componen
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
 import { categoryLabel } from '@/features/finance/lib/transaction-list'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 const column = createDataTableColumnHelper<TransactionRow>()
 
 /** Columns for the transactions table (money formatted in the Finance currency). */
 export function useTransactionColumns() {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   return useMemo(
     () =>
@@ -101,6 +102,6 @@ export function useTransactionColumns() {
           cell: (info) => <TransactionStatus row={info.row.original} />,
         }),
       ]),
-    [money],
+    [money, formatDate],
   )
 }

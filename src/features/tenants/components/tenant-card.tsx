@@ -5,10 +5,11 @@ import { TenantAvatar } from '@/features/tenants/components/tenant-avatar'
 import { LeaseStatusBadge, TenantStatusBadge } from '@/features/tenants/components/tenant-badges'
 import { leaseDateLine } from '@/features/tenants/lib/lease-dates'
 import { type TenantRow } from '@/features/tenants/lib/tenant-list'
-import { formatCurrency } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Card layout for the tenants list on tablet and mobile. */
 export function TenantCard({ row }: { row: TenantRow }) {
+  const { amount: formatCurrency, date: formatDate } = useFormat()
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
@@ -35,7 +36,7 @@ export function TenantCard({ row }: { row: TenantRow }) {
       </div>
       {row.leaseStatus && row.leaseStart && row.leaseEnd ? (
         <p className="text-caption text-muted-foreground">
-          {leaseDateLine(row.leaseStatus, { start: row.leaseStart, end: row.leaseEnd, endedAt: row.keyDate })}
+          {leaseDateLine(row.leaseStatus, { start: row.leaseStart, end: row.leaseEnd, endedAt: row.keyDate }, formatDate)}
         </p>
       ) : null}
       <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 border-t border-border pt-3 text-caption">

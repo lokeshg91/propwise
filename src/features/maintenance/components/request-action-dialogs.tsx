@@ -31,8 +31,8 @@ import { CurrencyInput } from '@/features/maintenance/components/currency-input'
 import { VendorSelect } from '@/features/maintenance/components/vendor-select'
 import { locationLabel } from '@/features/maintenance/lib/request-list'
 import { HOLD_REASON_LABELS } from '@/features/maintenance/lib/request-meta'
-import { defaultVisitTime, formatDateTime, toDateTimeLocal } from '@/features/maintenance/lib/request-time'
-import { formatDate } from '@/lib/format'
+import { defaultVisitTime, toDateTimeLocal } from '@/features/maintenance/lib/request-time'
+import { useFormat } from '@/hooks/use-format'
 import { toNullableNumber } from '@/lib/form-schema'
 import { cn } from '@/lib/utils'
 import { HOLD_REASONS, type HoldReason, type Vendor } from '@/types'
@@ -222,6 +222,7 @@ const rescheduleSchema = z.object({
 })
 
 function RescheduleForm({ detail, onCancel, onDone }: StepProps) {
+  const { dateTime: formatDateTime } = useFormat()
   const current = detail.activeWorkOrder
   const {
     register,
@@ -392,7 +393,7 @@ const unitAnswer = (detail: RequestDetail) =>
 
 /* --------------------------------------------------------------- complete */
 
-function completeSchema(detail: RequestDetail) {
+function completeSchema(detail: RequestDetail, formatDate: (isoDate: string) => string) {
   const today = todayIso()
   const orderDate = detail.activeWorkOrder ? toIsoDate(new Date(detail.activeWorkOrder.createdAt)) : today
   return z.object({
@@ -408,7 +409,8 @@ function completeSchema(detail: RequestDetail) {
 }
 
 function CompleteForm({ detail, onCancel, onDone }: StepProps) {
-  const schema = completeSchema(detail)
+  const { date: formatDate } = useFormat()
+  const schema = completeSchema(detail, formatDate)
   const {
     register,
     control,
@@ -524,6 +526,7 @@ function CancelForm({ detail, onCancel, onDone }: StepProps) {
 const reopenSchema = z.object({ reason: z.string().trim().min(3, 'Say why the request is reopened').max(200, 'Keep the reason under 200 characters') })
 
 function ReopenForm({ detail, onCancel, onDone }: StepProps) {
+  const { date: formatDate } = useFormat()
   const {
     register,
     handleSubmit,

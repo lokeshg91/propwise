@@ -3,10 +3,11 @@ import { Link } from 'react-router'
 import { VendorActionsMenu } from '@/features/vendors/components/vendor-actions-menu'
 import { CategoryChips, VendorStatusBadge } from '@/features/vendors/components/vendor-badges'
 import { type VendorRow } from '@/features/vendors/lib/vendor-list'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Card layout for the vendor list on tablet and mobile. */
 export function VendorCard({ row }: { row: VendorRow }) {
+  const { date: formatDate } = useFormat()
   const { vendor } = row
   return (
     <div className="flex flex-col gap-3">

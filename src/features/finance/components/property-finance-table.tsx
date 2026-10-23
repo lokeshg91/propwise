@@ -3,18 +3,18 @@ import { useMemo } from 'react'
 import { Link } from 'react-router'
 
 import { EmptyState } from '@/components/shared/empty-state'
+import { FormattedPercent } from '@/components/shared/formatted'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { DataTable } from '@/components/tables/data-table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type PropertyFinanceRow } from '@/data/domain/finance-summary'
 import { PropertyTypeLabel } from '@/features/properties/components/property-badges'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatPercent } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const column = createDataTableColumnHelper<PropertyFinanceRow>()
 const linkClass = 'rounded-sm font-medium text-foreground outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
-const rate = (value: number | null) => (value === null ? '—' : formatPercent(value))
+const rate = (value: number | null) => <FormattedPercent value={value} />
 
 function useColumns(money: ReturnType<typeof useMoney>) {
   return useMemo(

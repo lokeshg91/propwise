@@ -14,10 +14,9 @@ import { type TenantFinance, type TenantLedgerEntry, type TenantPaymentRow } fro
 import { AgingBar } from '@/features/finance/components/aging-bar'
 import { ChargeStatusBadge, DemoBadge } from '@/features/finance/components/finance-badges'
 import { RecordPaymentDialog } from '@/features/finance/components/income-actions'
-import { MoneyProvider } from '@/features/finance/components/money-provider'
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
-import { formatDate, formatMonth, formatPercent } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 const entryColumn = createDataTableColumnHelper<TenantLedgerEntry>()
@@ -39,17 +38,18 @@ function RecordLink({ id, reference, demo }: { id: string; reference: string; de
   )
 }
 
-const chargeLabel = (entry: TenantLedgerEntry) => {
+const chargeLabel = (entry: TenantLedgerEntry, formatMonth: (period: string, style?: 'short' | 'long') => string) => {
   const { charge } = entry
   const category = INCOME_CATEGORY_LABELS[charge.category]
   return charge.period ? `${category}, ${formatMonth(charge.period, 'long')}` : category
 }
 
 function ChargeDescription({ entry, showUnit }: { entry: TenantLedgerEntry; showUnit: boolean }) {
+  const { month: formatMonth } = useFormat()
   const { charge } = entry
   return (
     <span className="flex min-w-0 flex-col">
-      <span className="text-foreground">{chargeLabel(entry)}</span>
+      <span className="text-foreground">{chargeLabel(entry, formatMonth)}</span>
       {charge.description && charge.category !== 'rent' && charge.description.toLowerCase() !== INCOME_CATEGORY_LABELS[charge.category].toLowerCase() ? (
         <span className="text-caption text-muted-foreground">{charge.description}</span>
       ) : null}
@@ -90,15 +90,12 @@ interface TenantPaymentsTabProps {
 
 /** The tenant's charges and payments from the stored Finance ledger. */
 export function TenantPaymentsTab(props: TenantPaymentsTabProps) {
-  return (
-    <MoneyProvider settings={props.finance.settings}>
-      <PaymentsContent {...props} />
-    </MoneyProvider>
-  )
+  return <PaymentsContent {...props} />
 }
 
 function PaymentsContent({ finance, tenantId, onSaved }: TenantPaymentsTabProps) {
   const money = useMoney()
+  const { date: formatDate, month: formatMonth, percent: formatPercent } = useFormat()
   const [paying, setPaying] = useState<TenantLedgerEntry | null>(null)
   const multipleUnits = new Set(finance.entries.map((entry) => entry.charge.unitId)).size > 1
   const financeHref = `/finance/transactions?party=${encodeURIComponent(`tenant:${tenantId}`)}&range=all`
@@ -112,7 +109,7 @@ function PaymentsContent({ finance, tenantId, onSaved }: TenantPaymentsTabProps)
           sortFn: 'text',
           cell: (info) => <RecordLink id={info.row.original.charge.id} reference={info.getValue()} demo={info.row.original.charge.demo} />,
         }),
-        entryColumn.accessor((row) => chargeLabel(row), {
+        entryColumn.accessor((row) => chargeLabel(row, formatMonth), {
           id: 'charge',
           header: 'Charge',
           sortFn: 'text',
@@ -159,7 +156,7 @@ function PaymentsContent({ finance, tenantId, onSaved }: TenantPaymentsTabProps)
             ) : null,
         }),
       ]),
-    [multipleUnits],
+    [multipleUnits, formatDate, formatMonth],
   )
 
   const paymentColumns = useMemo(
@@ -212,7 +209,7 @@ function PaymentsContent({ finance, tenantId, onSaved }: TenantPaymentsTabProps)
           cell: (info) => <PaymentStatus row={info.row.original} />,
         }),
       ]),
-    [],
+    [formatDate],
   )
 
   const figures = [

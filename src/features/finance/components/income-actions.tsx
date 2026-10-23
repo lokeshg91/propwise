@@ -13,7 +13,7 @@ import { addLateFee, adjustCharge, endRecurringCharge, recordPayment, voidCharge
 import { ActionDialog } from '@/features/finance/components/action-dialog'
 import { MoneyInput } from '@/features/finance/components/money-input'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { PAYMENT_METHODS, type Payment, type PaymentMethod, type RecurringCharge } from '@/types'
 
 type IncomeDetailData = Extract<TransactionDetail, { kind: 'income' }>
@@ -98,6 +98,7 @@ export function RecordPaymentDialog({ detail, onClose, onDone }: ActionProps & {
 }
 
 export function VoidPaymentDialog({ payment, onClose, onDone }: ActionProps & { payment: Payment }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   const [reason, setReason] = useState('')
   return (
@@ -172,7 +173,7 @@ export function VoidChargeDialog({ detail, onClose, onDone }: ActionProps & { de
 /** The amount comes from the central rule and can't be edited. */
 export function AddLateFeeDialog({ detail, onClose, onDone }: ActionProps & { detail: IncomeDetailData }) {
   const money = useMoney()
-  const { charge, lateFeeAllowed, settings, property } = detail
+  const { charge, lateFeeAllowed, rule, property } = detail
   return (
     <ActionDialog
       title={`Add a late fee to ${charge.reference}`}
@@ -185,7 +186,7 @@ export function AddLateFeeDialog({ detail, onClose, onDone }: ActionProps & { de
         onDone(`${fee.reference} added: ${money(fee.amountCents)} late fee`)
       }}
     >
-      <p className="text-caption text-muted-foreground">{describeLateFeeRule(settings, (cents) => money(cents))}</p>
+      <p className="text-caption text-muted-foreground">{describeLateFeeRule(rule, (cents) => money(cents))}</p>
     </ActionDialog>
   )
 }

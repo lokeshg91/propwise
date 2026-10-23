@@ -6,11 +6,13 @@ import { CategoryLabel, RequestStatusBadge, TimingText } from '@/features/mainte
 import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { type RequestRow } from '@/features/maintenance/lib/request-list'
 import { timingLine } from '@/features/maintenance/lib/request-time'
+import { useFormat } from '@/hooks/use-format'
 import { formatRelativeTime } from '@/lib/format'
 
 /** Card layout for request lists on tablet and mobile. */
 export function RequestCard({ row, showProperty = true }: { row: RequestRow; showProperty?: boolean }) {
-  const { timing, text } = timingLine(row.request)
+  const { date: formatDate } = useFormat()
+  const { timing, text } = timingLine(row.request, formatDate)
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">

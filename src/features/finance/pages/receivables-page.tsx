@@ -30,13 +30,14 @@ import {
   type ReceivableView,
 } from '@/features/finance/lib/receivable-list'
 import { type receivablesLoader } from '@/features/finance/finance.loaders'
-import { formatDate, formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 import { type PropertyType } from '@/types'
 
 const column = createDataTableColumnHelper<ReceivableView>()
 
 function useColumns() {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   return useMemo(
     () =>
@@ -97,11 +98,12 @@ function useColumns() {
           cell: (info) => <span className="whitespace-nowrap text-muted-foreground">{info.getValue() ? formatDate(info.getValue()) : 'None'}</span>,
         }),
       ]),
-    [money],
+    [money, formatDate],
   )
 }
 
 export function ReceivablesPage() {
+  const { number: formatNumber } = useFormat()
   const { rows, properties } = useLoaderData<typeof receivablesLoader>()
   const { filters, setFilters, clearFilters, hasFilters } = useUrlFilters(DEFAULT_RECEIVABLE_FILTERS, parseReceivableFilters)
   const money = useMoney()
@@ -220,6 +222,7 @@ export function ReceivablesPage() {
 }
 
 function ReceivableCard({ row }: { row: ReceivableView }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   const late = AGING_BUCKETS.filter((bucket) => bucket !== 'current' && row.aging[bucket] > 0)
   return (

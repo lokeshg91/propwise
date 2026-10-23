@@ -16,6 +16,7 @@ import { type UnitDialogState, UnitFormDialog } from '@/features/properties/comp
 import { buildPropertyTimeline, getUnitStats } from '@/features/properties/lib/property-detail'
 import { PropertyFinanceTab } from '@/features/properties/components/property-finance-tab'
 import { type propertyDetailsLoader } from '@/features/properties/properties.loaders'
+import { useFormat } from '@/hooks/use-format'
 import { type Unit } from '@/types'
 
 const TABS = ['overview', 'units', 'activity', 'maintenance', 'finance'] as const
@@ -33,7 +34,8 @@ export function PropertyDetailsPage() {
   const [dialog, setDialog] = useState<UnitDialogState>(null)
 
   const stats = useMemo(() => getUnitStats(units, property.totalUnits), [units, property.totalUnits])
-  const timeline = useMemo(() => buildPropertyTimeline(detail), [detail])
+  const { amount } = useFormat()
+  const timeline = useMemo(() => buildPropertyTimeline(detail, amount), [detail, amount])
   const canAddUnit = units.length < property.totalUnits
   const openRequests = detail.maintenanceRequests.filter((item) => isActiveRequest(item.request)).length
 

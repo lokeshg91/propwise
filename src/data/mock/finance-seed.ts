@@ -1,6 +1,6 @@
 import { addDays } from '@/data/domain/dates'
 import { addPeriods, firstDayOf, lastDayOf, periodRange } from '@/data/domain/finance-schedule'
-import { paymentsByCharge, chargeState, suggestedLateFeeCents } from '@/data/domain/finance-rules'
+import { chargeState, graceFor, paymentsByCharge, ruleFor, suggestedLateFeeCents } from '@/data/domain/finance-rules'
 import { percentOfCents, sumCents } from '@/data/domain/money'
 import { hashString } from '@/data/mock/tenancy-seed'
 import { type DemoDatabase } from '@/data/store/demo-store'
@@ -182,10 +182,10 @@ function pickArrearsLease(db: DemoDatabase, today: string): string | null {
 function addLateFees(db: DemoDatabase, today: string, now: string, pay: Pay) {
   const payments = paymentsByCharge(db.payments)
   const properties = new Map(db.properties.map((property) => [property.id, property]))
-  const grace = db.finance.graceDays
   for (const charge of [...db.charges]) {
     if (!charge.demo || charge.category !== 'rent') continue
     const list = payments.get(charge.id) ?? []
+    const grace = graceFor(db.finance, charge)
     const state = chargeState(charge, list, today, grace)
     const lateDate = addDays(charge.dueDate, grace + 1)
     const paidLate = state.status === 'paid' && state.paidLate
@@ -202,7 +202,7 @@ function addLateFees(db: DemoDatabase, today: string, now: string, pay: Pay) {
       ...(charge.unitId ? { unitId: charge.unitId } : {}),
       ...(charge.period ? { period: charge.period } : {}),
       description: 'Late fee',
-      amountCents: suggestedLateFeeCents(charge, properties.get(charge.propertyId)?.type ?? 'residential', db.finance),
+      amountCents: suggestedLateFeeCents(charge, properties.get(charge.propertyId)?.type ?? 'residential', ruleFor(db.finance, charge.dueDate)),
       issuedOn: lateDate,
       dueDate: lateDate,
       demo: true,

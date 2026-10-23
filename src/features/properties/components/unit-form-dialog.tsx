@@ -22,8 +22,8 @@ import { createUnit, isServiceError, updateUnit } from '@/data/services'
 import { type UnitLease } from '@/features/properties/components/unit-columns'
 import { UNIT_STATUS_LABELS, UNIT_TYPE_LABELS, unitLabel, unitTypesFor } from '@/features/properties/lib/property-meta'
 import { createUnitSchema, toUnitInput, type UnitFormDraft, type UnitFormValues } from '@/features/properties/lib/unit-schema'
+import { useFormat } from '@/hooks/use-format'
 import { toNullableNumber } from '@/lib/form-schema'
-import { formatShortDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { type Property, type Unit, type UnitStatus } from '@/types'
 
@@ -94,6 +94,7 @@ function UnitForm({
   onCancel: () => void
   onSaved: () => void
 }) {
+  const { date: formatDate } = useFormat()
   const schema = useMemo(() => createUnitSchema(property.type), [property.type])
   const {
     register,
@@ -208,7 +209,7 @@ function UnitForm({
 
       {leased && lease ? (
         <LeasePanel icon={UserRound} title="Occupied" lease={lease}>
-          Lease ends {formatShortDate(lease.endDate)}, {lease.endDate.slice(0, 4)}. To vacate the unit, end the lease from the tenant’s profile.
+          Lease ends {formatDate(lease.endDate)}. To vacate the unit, end the lease from the tenant’s profile.
         </LeasePanel>
       ) : (
         <Controller
@@ -249,7 +250,7 @@ function UnitForm({
 
       {reserved && lease ? (
         <LeasePanel icon={CalendarClock} title="Reserved" lease={lease}>
-          Pending lease, moving in {formatShortDate(lease.startDate)}, {lease.startDate.slice(0, 4)}.
+          Pending lease, moving in {formatDate(lease.startDate)}.
         </LeasePanel>
       ) : null}
 

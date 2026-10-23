@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { todayIso } from '@/data/domain/dates'
 import { activateLease, cancelLease, endLease, isServiceError } from '@/data/services'
 import { LEASE_END_REASON_LABELS } from '@/features/tenants/lib/tenant-meta'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { LEASE_END_REASONS, type Lease } from '@/types'
 
 export type LeaseAction = 'end' | 'cancel' | 'activate'
@@ -57,7 +57,7 @@ export function LeaseActionDialog({ action, lease, tenantName, unitDescription, 
   )
 }
 
-function endLeaseSchema(lease: Lease) {
+function endLeaseSchema(lease: Lease, formatDate: (isoDate: string) => string) {
   const today = todayIso()
   return z.object({
     moveOutDate: z
@@ -84,6 +84,7 @@ function EndLeaseForm({
   onCancel: () => void
   onDone: () => void
 }) {
+  const { date: formatDate } = useFormat()
   const today = todayIso()
   const atTermDefault = lease.endDate <= today
   const {
@@ -93,7 +94,7 @@ function EndLeaseForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<EndLeaseValues>({
-    resolver: zodResolver(endLeaseSchema(lease)),
+    resolver: zodResolver(endLeaseSchema(lease, formatDate)),
     defaultValues: { moveOutDate: today, reason: atTermDefault ? 'moved-out' : 'early-termination' },
     mode: 'onTouched',
   })
@@ -174,7 +175,7 @@ const CONFIRM_COPY = {
     title: 'Cancel pending lease',
     confirm: 'Cancel lease',
     dismiss: 'Keep lease',
-    body: (tenant: string, unit: string, lease: Lease) =>
+    body: (tenant: string, unit: string, lease: Lease, formatDate: (isoDate: string) => string) =>
       `${tenant} won’t move in to ${unit} on ${formatDate(lease.startDate)}. The unit stops being reserved and can be leased to someone else.`,
     toast: 'Pending lease cancelled',
   },
@@ -182,7 +183,7 @@ const CONFIRM_COPY = {
     title: 'Mark as moved in',
     confirm: 'Mark as moved in',
     dismiss: 'Not yet',
-    body: (tenant: string, unit: string, lease: Lease) =>
+    body: (tenant: string, unit: string, lease: Lease, formatDate: (isoDate: string) => string) =>
       `${tenant}’s lease for ${unit} becomes active from ${formatDate(lease.startDate)} and the unit is marked occupied.`,
     toast: 'Tenant moved in',
   },
@@ -203,6 +204,7 @@ function ConfirmLeaseChange({
   onCancel: () => void
   onDone: () => void
 }) {
+  const { date: formatDate } = useFormat()
   const copy = CONFIRM_COPY[action]
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -224,7 +226,7 @@ function ConfirmLeaseChange({
     <div className="flex flex-col gap-5">
       <DialogHeader>
         <DialogTitle>{copy.title}</DialogTitle>
-        <DialogDescription>{copy.body(tenantName, unitDescription, lease)}</DialogDescription>
+        <DialogDescription>{copy.body(tenantName, unitDescription, lease, formatDate)}</DialogDescription>
       </DialogHeader>
       {error ? (
         <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-body text-danger dark:bg-danger/15">

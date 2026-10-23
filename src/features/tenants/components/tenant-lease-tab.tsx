@@ -11,7 +11,7 @@ import { LeaseAlert } from '@/features/tenants/components/lease-alert'
 import { type LeaseAction } from '@/features/tenants/components/lease-action-dialogs'
 import { LeaseStatusBadge } from '@/features/tenants/components/tenant-badges'
 import { LEASE_END_REASON_LABELS } from '@/features/tenants/lib/tenant-meta'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type LeaseDisplayStatus } from '@/types'
 
 interface TenantLeaseTabProps {
@@ -21,6 +21,7 @@ interface TenantLeaseTabProps {
 }
 
 export function TenantLeaseTab({ detail, leaseStatus, onAction }: TenantLeaseTabProps) {
+  const { amount: formatCurrency, date: formatDate } = useFormat()
   const { tenant, lease } = detail
   const current = lease && (lease.status === 'active' || lease.status === 'pending') ? lease : null
   const record = detail.leases.find((entry) => entry.id === current?.id)

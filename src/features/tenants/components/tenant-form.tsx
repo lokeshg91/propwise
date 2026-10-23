@@ -23,7 +23,7 @@ import {
   type TenantFormDraft,
   type TenantFormValues,
 } from '@/features/tenants/lib/tenant-schema'
-import { formatCurrency } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { toNullableNumber } from '@/lib/form-schema'
 import { cn } from '@/lib/utils'
 import { TENANT_KINDS } from '@/types'
@@ -49,6 +49,7 @@ interface TenantFormProps {
 }
 
 export function TenantForm({ mode, defaultValues, assignable, submitLabel, cancelHref, onSubmit }: TenantFormProps) {
+  const { amount: formatCurrency } = useFormat()
   const schema = useMemo(() => createTenantSchema({ requireLease: mode.kind !== 'edit-past' }), [mode.kind])
   const {
     register,

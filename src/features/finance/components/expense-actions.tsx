@@ -8,7 +8,7 @@ import { markExpensePaid, markExpenseUnpaid, updateExpense, voidExpense } from '
 import { ActionDialog } from '@/features/finance/components/action-dialog'
 import { type ActionProps, MethodSelect } from '@/features/finance/components/income-actions'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type Expense, type PaymentMethod } from '@/types'
 
 export function MarkPaidDialog({ expense, onClose, onDone }: ActionProps & { expense: Expense }) {
@@ -41,6 +41,7 @@ export function MarkPaidDialog({ expense, onClose, onDone }: ActionProps & { exp
 }
 
 export function MarkUnpaidDialog({ expense, onClose, onDone }: ActionProps & { expense: Expense }) {
+  const { date: formatDate } = useFormat()
   const [reason, setReason] = useState('')
   return (
     <ActionDialog
@@ -90,6 +91,7 @@ export function VoidExpenseDialog({ expense, onClose, onDone }: ActionProps & { 
 
 /** Work-order bills: only the due date can change (the amount belongs to the work order). */
 export function ChangeDueDateDialog({ expense, onClose, onDone }: ActionProps & { expense: Expense }) {
+  const { date: formatDate } = useFormat()
   const [dueDate, setDueDate] = useState(expense.dueDate)
   return (
     <ActionDialog

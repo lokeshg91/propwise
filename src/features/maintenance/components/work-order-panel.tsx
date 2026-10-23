@@ -11,11 +11,9 @@ import { type RequestDetail, type WorkOrderWithVendor } from '@/data/services'
 import { ExpenseStatusBadge } from '@/features/finance/components/finance-badges'
 import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
 import { VendorLink } from '@/features/maintenance/components/vendor-link'
-import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import { replacedOrderOf, replacementOf } from '@/features/maintenance/lib/work-order-history'
-import { formatCurrency, formatMoney } from '@/lib/format'
-
-const money = (value: number | null) => (value === null ? '—' : formatCurrency(value))
+import { useFormat } from '@/hooks/use-format'
+import { formatMoney } from '@/lib/format'
 
 /** Link to the Finance bill a completed work order created, with its status in words. */
 function BillLink({ order }: { order: WorkOrderWithVendor }) {
@@ -45,6 +43,8 @@ function ReassignmentNote({ label, order }: { label: string; order: WorkOrderWit
 
 /** Current work order with its actions, plus every earlier work order (cancelled or completed). */
 export function WorkOrderPanel({ detail, onAction }: { detail: RequestDetail; onAction: (action: RequestAction) => void }) {
+  const { amount, dateTime: formatDateTime } = useFormat()
+  const money = (value: number | null) => (value === null ? '—' : amount(value))
   const active = detail.workOrders.find((order) => order.id === detail.activeWorkOrder?.id)
   const latest = active ?? detail.workOrders[0]
   const history = detail.workOrders.filter((order) => order.id !== latest?.id)

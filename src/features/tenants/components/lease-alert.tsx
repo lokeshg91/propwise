@@ -3,11 +3,12 @@ import { type ReactNode } from 'react'
 
 import { StatusAlert } from '@/components/shared/status-alert'
 import { daysBetween, todayIso } from '@/data/domain/dates'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type Lease, type LeaseDisplayStatus } from '@/types'
 
 /** Explains statuses that need action: holdover, expiring and move-in due. */
 export function LeaseAlert({ lease, status, action }: { lease: Lease; status: LeaseDisplayStatus; action?: ReactNode }) {
+  const { date: formatDate } = useFormat()
   const today = todayIso()
   switch (status) {
     case 'holdover':

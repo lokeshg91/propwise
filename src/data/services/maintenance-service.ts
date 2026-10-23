@@ -263,7 +263,7 @@ export function updateServiceRequest(id: string, input: ServiceRequestInput): Pr
       if (previousPriority !== request.priority) {
         // Keep the same start of the SLA clock, with the new target.
         request.dueAt = new Date(new Date(request.dueAt).getTime() + (SLA_HOURS[request.priority] - SLA_HOURS[previousPriority]) * 3_600_000).toISOString()
-        record(db, request, 'priority-changed', `Priority changed to ${request.priority}`, `Was ${previousPriority}. New target ${formatTimestamp(request.dueAt)}.`)
+        record(db, request, 'priority-changed', `Priority changed to ${request.priority}`, `Was ${previousPriority}. New target ${formatTimestamp(db, request.dueAt)}.`)
       }
       record(db, request, 'updated', 'Request details updated', 'Issue, location or access details were edited.')
       return request
@@ -313,7 +313,7 @@ export function rescheduleWorkOrder(id: string, scheduledFor: string): Promise<W
       order.scheduledFor = new Date(scheduledFor).toISOString()
       order.updatedAt = new Date().toISOString()
       touch(request)
-      record(db, request, 'rescheduled', 'Visit rescheduled', `${vendorName(db, order.vendorId).name} on ${formatTimestamp(order.scheduledFor)}.`)
+      record(db, request, 'rescheduled', 'Visit rescheduled', `${vendorName(db, order.vendorId).name} on ${formatTimestamp(db, order.scheduledFor)}.`)
       return order
     }),
   )
@@ -401,7 +401,7 @@ export function completeRequest(id: string, input: CompleteRequestInput): Promis
         request,
         'completed',
         'Request completed',
-        `${vendorName(db, order.vendorId).name} finished the work${input.actualCost !== null ? `. Final cost ${formatUsd(input.actualCost)}` : ''}.`,
+        `${vendorName(db, order.vendorId).name} finished the work${input.actualCost !== null ? `. Final cost ${formatCost(db, input.actualCost)}` : ''}.`,
       )
       if (input.returnUnitToVacant) releaseUnit(db, request)
       return request
@@ -517,7 +517,7 @@ function assignOrder(db: DemoDatabase, request: ServiceRequest, input: WorkOrder
       request,
       eventKind,
       `Assigned to ${vendor.name}`,
-      [order.scheduledFor ? `Visit ${formatTimestamp(order.scheduledFor)}` : 'Visit not scheduled yet', order.estimatedCost !== null ? `estimate ${formatUsd(order.estimatedCost)}` : null]
+      [order.scheduledFor ? `Visit ${formatTimestamp(db, order.scheduledFor)}` : 'Visit not scheduled yet', order.estimatedCost !== null ? `estimate ${formatCost(db, order.estimatedCost)}` : null]
         .filter(Boolean)
         .join(', ') + '.',
     )
@@ -592,9 +592,16 @@ const isValidTimestamp = (value: string) => !Number.isNaN(new Date(value).getTim
 const touch = (request: ServiceRequest) => {
   request.updatedAt = new Date().toISOString()
 }
-const formatUsd = (value: number) => `$${value.toLocaleString('en-US')}`
-const formatTimestamp = (value: string) =>
-  new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+/**
+ * Amounts and times written into new activity entries, in the workspace
+ * currency and region (Phase 9). With the defaults (USD, en-US) the text is
+ * exactly what earlier versions wrote, e.g. "$315" and "Oct 24, 9:30 AM".
+ * Entries already in the history keep the text they were written with.
+ */
+const formatCost = (db: DemoDatabase, value: number) =>
+  new Intl.NumberFormat(db.finance.locale, { style: 'currency', currency: db.finance.currency, minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(value)
+const formatTimestamp = (db: DemoDatabase, value: string) =>
+  new Date(value).toLocaleString(db.finance.locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 
 function describeLocation(db: DemoDatabase, request: ServiceRequest): string {
   const property = db.properties.find((entry) => entry.id === request.propertyId)

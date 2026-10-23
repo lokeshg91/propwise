@@ -1,6 +1,6 @@
 import { addDays, daysBetween } from '@/data/domain/dates'
 import { percentOfCents, sumCents } from '@/data/domain/money'
-import { type Charge, type Expense, type FinanceSettings, type Payment, type PropertyType } from '@/types'
+import { type Charge, type Expense, type FinanceRule, type FinanceRuleVersion, type FinanceSettings, type Payment, type PropertyType } from '@/types'
 
 /**
  * Finance rules shared by services, reconciliation and the UI. Statuses are
@@ -77,6 +77,51 @@ export function agingBucket(daysOverdue: number): AgingBucket {
 
 export const emptyAging = (): Record<AgingBucket, number> => ({ current: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 })
 
+/* ---------------------------------------------------------- rule versions */
+
+/** Limits for editable rule values (Settings, Phase 9). */
+export const RULE_LIMITS = {
+  graceDays: { min: 0, max: 31 },
+  residentialCents: { min: 0, max: 100_000 },
+  commercialPercent: { min: 0, max: 25 },
+  paymentTermsDays: { min: 0, max: 120 },
+} as const
+
+/**
+ * The rule version in force on `dueDate`: the latest version whose
+ * `effectiveFrom` is on or before it. Charges due before the first version
+ * (possible for manual charges dated before Finance history) use the first
+ * one. `rules` is kept sorted oldest first.
+ */
+export function ruleFor(settings: Pick<FinanceSettings, 'rules'>, dueDate: string): FinanceRuleVersion {
+  const { rules } = settings
+  let found = rules[0]
+  for (const rule of rules) {
+    if (rule.effectiveFrom <= dueDate) found = rule
+    else break
+  }
+  if (!found) throw new Error('Finance settings have no rule version.')
+  return found
+}
+
+/** Grace days for one charge (the rule in force on its due date). */
+export const graceFor = (settings: Pick<FinanceSettings, 'rules'>, charge: Pick<Charge, 'dueDate'>): number => ruleFor(settings, charge.dueDate).graceDays
+
+/** Problems with a rule's values, empty when valid. */
+export function ruleProblems(rule: FinanceRule): string[] {
+  const problems: string[] = []
+  const inRange = (value: number, { min, max }: { min: number; max: number }) => Number.isFinite(value) && value >= min && value <= max
+  if (!Number.isInteger(rule.graceDays) || !inRange(rule.graceDays, RULE_LIMITS.graceDays)) problems.push(`grace days must be a whole number from ${RULE_LIMITS.graceDays.min} to ${RULE_LIMITS.graceDays.max}`)
+  if (!Number.isInteger(rule.lateFee.residentialCents) || !inRange(rule.lateFee.residentialCents, RULE_LIMITS.residentialCents)) problems.push('the residential fee must be from 0.00 to 1,000.00')
+  if (!inRange(rule.lateFee.commercialPercent, RULE_LIMITS.commercialPercent) || Math.round(rule.lateFee.commercialPercent * 100) !== rule.lateFee.commercialPercent * 100) {
+    problems.push(`the commercial percentage must be from ${RULE_LIMITS.commercialPercent.min} to ${RULE_LIMITS.commercialPercent.max}, with at most 2 decimals`)
+  }
+  return problems
+}
+
+export const sameRule = (a: FinanceRule, b: FinanceRule): boolean =>
+  a.graceDays === b.graceDays && a.lateFee.residentialCents === b.lateFee.residentialCents && a.lateFee.commercialPercent === b.lateFee.commercialPercent
+
 /* ------------------------------------------------------------ late fees */
 
 /**
@@ -92,7 +137,7 @@ export const emptyAging = (): Record<AgingBucket, number> => ({ current: 0, '1-3
  *   balance still open: due Oct 1 → grace Oct 2–6 → available from Oct 7.
  *   A payment made on or before the last grace day isn't late.
  */
-export function suggestedLateFeeCents(charge: Pick<Charge, 'amountCents'>, propertyType: PropertyType, settings: Pick<FinanceSettings, 'lateFee'>): number {
+export function suggestedLateFeeCents(charge: Pick<Charge, 'amountCents'>, propertyType: PropertyType, settings: Pick<FinanceRule, 'lateFee'>): number {
   return propertyType === 'commercial' ? percentOfCents(charge.amountCents, settings.lateFee.commercialPercent) : settings.lateFee.residentialCents
 }
 
@@ -100,7 +145,7 @@ export function suggestedLateFeeCents(charge: Pick<Charge, 'amountCents'>, prope
 export const lateFeeAvailableFrom = (dueDate: string, graceDays: number): string => addDays(dueDate, graceDays + 1)
 
 /** Plain-language version of the rule for the UI. */
-export function describeLateFeeRule(settings: Pick<FinanceSettings, 'lateFee' | 'graceDays'>, money: (cents: number) => string): string {
+export function describeLateFeeRule(settings: FinanceRule, money: (cents: number) => string): string {
   return (
     `Residential: a fixed ${money(settings.lateFee.residentialCents)} per late rent charge. ` +
     `Commercial: ${settings.lateFee.commercialPercent}% of the full rent charge (not the unpaid balance), rounded to the cent, with no minimum or cap. ` +

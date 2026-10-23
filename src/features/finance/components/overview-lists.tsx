@@ -8,13 +8,14 @@ import { type CashMovement, type UpcomingItem } from '@/data/domain/finance-summ
 import { type FinanceOverview } from '@/data/services'
 import { DemoBadge, KindLabel, ScheduledBadge } from '@/features/finance/components/finance-badges'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatDate, formatMonth, formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 const linkClass = 'rounded-sm font-medium text-foreground outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
 
 /** Latest money in (payments) and out (bills paid). */
 export function RecentTransactionsCard({ items }: { items: CashMovement[] }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   return (
     <Card className="min-w-0">
@@ -60,6 +61,7 @@ export function RecentTransactionsCard({ items }: { items: CashMovement[] }) {
 
 /** What's due in the next 30 days: open charges, projected rent and unpaid bills. */
 export function UpcomingCard({ items }: { items: UpcomingItem[] }) {
+  const { date: formatDate, month: formatMonth, number: formatNumber } = useFormat()
   const money = useMoney()
   const projected = new Map<string, { period: string; date: string; amountCents: number; count: number }>()
   for (const item of items) {
@@ -171,6 +173,7 @@ export function ExpenseBreakdownCard({ items }: { items: FinanceOverview['expens
 
 /** Unpaid bills, committed maintenance and deposits held (deposits are never income). */
 export function PayablesCard({ overview }: { overview: FinanceOverview }) {
+  const { number: formatNumber } = useFormat()
   const money = useMoney()
   const { payables } = overview
   const rows = [

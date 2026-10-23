@@ -6,9 +6,11 @@ import { ratioPercent } from '@/data/domain/money'
 import { type FinanceOverview } from '@/data/services'
 import { KpiCard } from '@/features/dashboard/components/kpi-card'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatNumber, formatPercent, formatSigned } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
+import { formatSigned } from '@/lib/format'
 
 function Change({ current, previous, inverse = false }: { current: number; previous: number | undefined; inverse?: boolean }) {
+  const { percent: formatPercent } = useFormat()
   if (previous === undefined) return <p className="text-caption text-muted-foreground">No full previous period yet</p>
   const percent = ratioPercent(current - previous, Math.abs(previous))
   if (previous === 0 || percent === null) return <p className="text-caption text-muted-foreground">No data for the previous period</p>
@@ -18,6 +20,7 @@ function Change({ current, previous, inverse = false }: { current: number; previ
 /** Cash-basis headline figures with billed and incurred amounts alongside. */
 /** `previous` is null when the previous period starts before Finance history (no fair comparison). */
 export function FinanceKpis({ totals, previous, receivables }: { totals: FinanceTotals; previous: FinanceTotals | null; receivables: FinanceOverview['receivables'] }) {
+  const { number: formatNumber } = useFormat()
   const money = useMoney()
   return (
     <section aria-label="Finance figures" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">

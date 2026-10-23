@@ -3,13 +3,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 
 import { EmptyState } from '@/components/shared/empty-state'
+import { FormattedAmount, FormattedDateTime } from '@/components/shared/formatted'
 import { SegmentedControl } from '@/components/shared/segmented-control'
 import { DataTable } from '@/components/tables/data-table'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type VendorWorkOrder } from '@/data/services'
 import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
-import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import {
   locationText,
   matchesWorkOrderGroup,
@@ -17,7 +17,7 @@ import {
   WORK_ORDER_GROUPS,
   type WorkOrderGroup,
 } from '@/features/vendors/lib/vendor-detail'
-import { formatCurrency } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 const column = createDataTableColumnHelper<VendorWorkOrder>()
 const linkClass = 'rounded-sm outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -30,8 +30,6 @@ function keyDate(entry: VendorWorkOrder): { label: string; value: string } {
   if (order.scheduledFor) return { label: 'Visit', value: order.scheduledFor }
   return { label: 'Assigned', value: order.createdAt }
 }
-
-const money = (value: number | null) => (value === null ? '—' : formatCurrency(value))
 
 function ReplacedNote({ entry }: { entry: VendorWorkOrder }) {
   if (!entry.replacedBy) return null
@@ -94,7 +92,7 @@ const columns = column.columns([
       return (
         <span className="block whitespace-nowrap">
           <span className="block text-caption text-muted-foreground">{date.label}</span>
-          {formatDateTime(date.value)}
+          <FormattedDateTime value={date.value} />
         </span>
       )
     },
@@ -107,17 +105,31 @@ const columns = column.columns([
       const { order } = info.row.original
       return order.status === 'completed' ? (
         <span className="block tabular-nums">
-          {money(order.actualCost)}
-          {order.estimatedCost !== null ? <span className="block text-caption text-muted-foreground">est. {money(order.estimatedCost)}</span> : null}
+          <FormattedAmount value={order.actualCost} />
+          {order.estimatedCost !== null ? (
+            <span className="block text-caption text-muted-foreground">
+              est. <FormattedAmount value={order.estimatedCost} />
+            </span>
+          ) : null}
         </span>
       ) : (
-        <span className="text-muted-foreground tabular-nums">{order.estimatedCost === null ? '—' : `Est. ${money(order.estimatedCost)}`}</span>
+        <span className="text-muted-foreground tabular-nums">
+          {order.estimatedCost === null ? (
+            '—'
+          ) : (
+            <>
+              Est. <FormattedAmount value={order.estimatedCost} />
+            </>
+          )}
+        </span>
       )
     },
   }),
 ])
 
 function WorkOrderCard({ entry }: { entry: VendorWorkOrder }) {
+  const { amount, dateTime: formatDateTime } = useFormat()
+  const money = (value: number | null) => (value === null ? '—' : amount(value))
   const date = keyDate(entry)
   return (
     <div className="flex flex-col gap-2">

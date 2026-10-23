@@ -217,7 +217,7 @@ describe('suspended session (saved data could not be upgraded)', () => {
   /** Stores the seed as a Phase 7 (v4) save and makes its upgrade fail. */
   function suspend() {
     const seed = structuredClone(readDatabase()) as unknown as Record<string, unknown>
-    for (const key of ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance']) delete seed[key]
+    for (const key of ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance', 'appSettings', 'settingsEvents']) delete seed[key]
     seed.version = 4
     seed.sequences = { request: (readDatabase() as DemoDatabase).sequences.request }
     resetDemoData()

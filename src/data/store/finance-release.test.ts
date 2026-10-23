@@ -22,6 +22,8 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 const FINANCE_KEYS = ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance'] as const
+/** Added in v6 (Phase 9); a real v4 save has none of these. */
+const V6_KEYS = ['appSettings', 'settingsEvents'] as const
 
 /** The rules every saved dataset must satisfy. */
 function expectSound(db: DemoDatabase, today: string) {
@@ -42,7 +44,7 @@ function expectSound(db: DemoDatabase, today: string) {
 
 function toV4(db: DemoDatabase): DemoDatabaseV4 {
   const copy = structuredClone(db) as unknown as Record<string, unknown>
-  for (const key of FINANCE_KEYS) delete copy[key]
+  for (const key of [...FINANCE_KEYS, ...V6_KEYS]) delete copy[key]
   copy.version = 4
   copy.sequences = { request: db.sequences.request }
   return copy as unknown as DemoDatabaseV4
@@ -117,7 +119,7 @@ describe('v0.8.0 release: upgrade from v0.7 data with user records', () => {
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, JSON.stringify(v4))
     const db = readDatabase()
-    expect(db.version).toBe(5)
+    expect(db.version).toBe(6)
     for (const key of Object.keys(snapshot) as Array<keyof DemoDatabaseV4>) {
       if (key === 'version' || key === 'sequences') continue
       expect(db[key as keyof DemoDatabase], key).toEqual(snapshot[key])

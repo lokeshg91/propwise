@@ -1,7 +1,8 @@
 import { ReceiptText, SearchX, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLoaderData } from 'react-router'
 
+import { CustomRangeForm } from '@/components/shared/custom-range-form'
 import { EmptyState } from '@/components/shared/empty-state'
 import { NavigationProgress } from '@/components/shared/navigation-progress'
 import { PageContainer } from '@/components/shared/page-container'
@@ -34,7 +35,7 @@ import {
   type TransactionKind,
 } from '@/features/finance/lib/transaction-list'
 import { type transactionsLoader } from '@/features/finance/finance.loaders'
-import { formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 const KIND_OPTIONS: Array<{ value: TransactionKind; label: string }> = [
   { value: 'all', label: 'All' },
@@ -42,9 +43,10 @@ const KIND_OPTIONS: Array<{ value: TransactionKind; label: string }> = [
   { value: 'expense', label: 'Expenses' },
 ]
 
-const rangeLabel = (range: TransactionFilters['range']) => (range === 'all' ? 'All dates' : FINANCE_RANGE_LABELS[range])
+const presetLabel = (range: Exclude<TransactionFilters['range'], 'custom'>) => (range === 'all' ? 'All dates' : FINANCE_RANGE_LABELS[range])
 
 export function TransactionsPage() {
+  const { number: formatNumber, date: formatDate } = useFormat()
   const { rows, properties } = useLoaderData<typeof transactionsLoader>()
   const { filters, setFilters, clearFilters, hasFilters } = useUrlFilters(DEFAULT_TRANSACTION_FILTERS, parseTransactionFilters)
   const money = useMoney()
@@ -54,6 +56,9 @@ export function TransactionsPage() {
   const statuses = statusFiltersFor(filters.kind)
   const partyName = filters.party === 'all' ? null : (rows.find((row) => row.partyKey === filters.party)?.party ?? null)
   const categories = categoriesFor(filters.kind)
+  const [customOpen, setCustomOpen] = useState(false)
+  const showCustom = customOpen || filters.range === 'custom'
+  const rangeLabel = filters.range === 'custom' ? `${formatDate(filters.from)} – ${formatDate(filters.to)}` : presetLabel(filters.range)
 
   return (
     <PageContainer>
@@ -119,16 +124,26 @@ export function TransactionsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={filters.range} onValueChange={(range) => setFilters({ range: range as TransactionFilters['range'] })}>
-                <SelectTrigger aria-label="Filter by date" className="w-full lg:w-40">
+              <Select
+                value={showCustom ? 'custom' : filters.range}
+                onValueChange={(range) => {
+                  if (range === 'custom') setCustomOpen(true)
+                  else {
+                    setCustomOpen(false)
+                    setFilters({ range: range as TransactionFilters['range'], from: '', to: '' })
+                  }
+                }}
+              >
+                <SelectTrigger aria-label="Filter by date" className="w-full lg:w-44">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {TRANSACTION_RANGES.map((range) => (
                     <SelectItem key={range} value={range}>
-                      {rangeLabel(range)}
+                      {presetLabel(range as Exclude<TransactionFilters['range'], 'custom'>)}
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">Custom range…</SelectItem>
                 </SelectContent>
               </Select>
               {hasFilters ? (
@@ -137,6 +152,18 @@ export function TransactionsPage() {
                 </Button>
               ) : null}
             </div>
+            {showCustom ? (
+              <CustomRangeForm
+                key={`${filters.from}-${filters.to}`}
+                initial={filters.range === 'custom' ? { from: filters.from, to: filters.to } : { from: '', to: todayIso() }}
+                initialError={null}
+                onApply={(range) => {
+                  setCustomOpen(false)
+                  setFilters({ range: 'custom', from: range.from, to: range.to })
+                }}
+                onCancel={filters.range === 'custom' ? undefined : () => setCustomOpen(false)}
+              />
+            ) : null}
             {filters.party !== 'all' ? (
               <p className="flex flex-wrap items-center gap-2 text-body text-foreground">
                 <span>
@@ -190,7 +217,7 @@ export function TransactionsPage() {
                   size="sm"
                   icon={SearchX}
                   title="No records match your filters"
-                  description={`Nothing for these filters in ${rangeLabel(filters.range).toLowerCase()}. Try a longer period or reset the filters.`}
+                  description={`Nothing for these filters in ${filters.range === 'custom' ? rangeLabel : rangeLabel.toLowerCase()}. Try a longer period or reset the filters.`}
                   actions={
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                       Reset filters

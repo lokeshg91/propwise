@@ -1,5 +1,4 @@
 import { type PropertyDetail } from '@/data/services'
-import { formatCurrency } from '@/lib/format'
 import { type Unit, type UnitType } from '@/types'
 
 export type TimelineCategory = 'property' | 'unit' | 'tenant' | 'lease' | 'payment' | 'maintenance' | 'completed'
@@ -13,8 +12,12 @@ export interface TimelineItem {
   createdAt: string
 }
 
-/** Merges app changes, portfolio activity, maintenance and payments into one timeline, newest first. */
-export function buildPropertyTimeline(detail: PropertyDetail): TimelineItem[] {
+/**
+ * Merges app changes, portfolio activity, maintenance and payments into one
+ * timeline, newest first. `amount` formats whole-currency values in the
+ * workspace currency (`useFormat().amount`).
+ */
+export function buildPropertyTimeline(detail: PropertyDetail, amount: (value: number) => string): TimelineItem[] {
   const { property } = detail
   const items: TimelineItem[] = []
 
@@ -74,7 +77,7 @@ export function buildPropertyTimeline(detail: PropertyDetail): TimelineItem[] {
       id: `${payment.id}-paid`,
       category: 'payment',
       title: 'Rent payment received',
-      description: `${payment.tenantName} paid ${formatCurrency(payment.amount)} — ${payment.unit}`,
+      description: `${payment.tenantName} paid ${amount(payment.amount)} — ${payment.unit}`,
       createdAt: payment.paidAt,
     })
   }

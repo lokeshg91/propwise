@@ -1,4 +1,5 @@
-import { formatPercent } from '@/lib/format'
+
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 /** Inline occupancy bar; amber below 88% to flag attention. */
@@ -14,5 +15,6 @@ export function OccupancyMeter({ rate, className }: { rate: number; className?: 
 }
 
 export function OccupancyValue({ rate }: { rate: number }) {
+  const { percent: formatPercent } = useFormat()
   return <span className="font-medium text-foreground tabular-nums">{formatPercent(rate)}</span>
 }

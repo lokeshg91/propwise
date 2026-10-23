@@ -15,7 +15,8 @@ import { DemoBadge, ExpenseStatusBadge } from '@/features/finance/components/fin
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
 import { toActivityItems } from '@/features/finance/lib/finance-timeline'
-import { formatDate, formatPercent, formatSigned } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
+import { formatSigned } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 type ExpenseDetailData = Extract<TransactionDetail, { kind: 'expense' }>
@@ -25,6 +26,7 @@ const SOURCE_LABELS = { 'work-order': 'Created from a completed work order', man
 export type ExpenseAction = 'mark-paid' | 'mark-unpaid' | 'void' | 'due-date'
 
 export function ExpenseDetail({ detail, onAction }: { detail: ExpenseDetailData; onAction: (action: ExpenseAction) => void }) {
+  const { date: formatDate, percent: formatPercent } = useFormat()
   const money = useMoney()
   const { expense, status, vendor, property, unit, workOrder, request } = detail
   const variance = costVariancePercent(expense.estimatedCents, expense.amountCents)

@@ -1,12 +1,12 @@
 import { Link } from 'react-router'
 
+import { FormattedAmount, FormattedNumber } from '@/components/shared/formatted'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { OccupancyMeter, OccupancyValue } from '@/features/properties/components/occupancy-meter'
 import { PropertyActionsMenu } from '@/features/properties/components/property-actions-menu'
 import { PropertyStatusBadge, PropertyTypeLabel } from '@/features/properties/components/property-badges'
 import { type PropertyListRow } from '@/features/properties/lib/property-list'
 import { PROPERTY_STATUS_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber } from '@/lib/format'
 
 const column = createDataTableColumnHelper<PropertyListRow>()
 
@@ -47,12 +47,12 @@ export const propertyColumns = column.columns([
   column.accessor('totalUnits', {
     header: 'Units',
     meta: { align: 'end' },
-    cell: (info) => formatNumber(info.getValue()),
+    cell: (info) => <FormattedNumber value={info.getValue()} />,
   }),
   column.accessor('occupiedUnits', {
     header: 'Occupied',
     meta: { align: 'end' },
-    cell: (info) => formatNumber(info.getValue()),
+    cell: (info) => <FormattedNumber value={info.getValue()} />,
   }),
   column.accessor('occupancyRate', {
     header: 'Occupancy',
@@ -69,7 +69,7 @@ export const propertyColumns = column.columns([
   column.accessor('monthlyRevenue', {
     header: 'Revenue / mo',
     meta: { align: 'end' },
-    cell: (info) => <span className="font-medium text-foreground">{formatCurrency(info.getValue())}</span>,
+    cell: (info) => <span className="font-medium text-foreground"><FormattedAmount value={info.getValue()} /></span>,
   }),
   column.accessor((row) => PROPERTY_STATUS_LABELS[row.status], {
     id: 'status',

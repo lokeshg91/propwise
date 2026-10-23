@@ -3,10 +3,11 @@ import { DoorOpen, KeyRound, Percent, Wallet } from 'lucide-react'
 import { KpiCard } from '@/features/dashboard/components/kpi-card'
 import { OccupancyMeter } from '@/features/properties/components/occupancy-meter'
 import { type UnitStats } from '@/features/properties/lib/property-detail'
-import { formatCurrency, formatNumber, formatPercent } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type Property } from '@/types'
 
 export function PropertyKpis({ property, stats }: { property: Property; stats: UnitStats }) {
+  const { amount: formatCurrency, number: formatNumber, percent: formatPercent } = useFormat()
   const available = stats.vacant + stats.notAdded
 
   return (

@@ -8,6 +8,7 @@ import { type RequestListItem } from '@/data/services'
 import { RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
 import { locationLabel } from '@/features/maintenance/lib/request-list'
 import { timingLine } from '@/features/maintenance/lib/request-time'
+import { useFormat } from '@/hooks/use-format'
 
 interface RequestsMiniListProps {
   items: RequestListItem[]
@@ -19,6 +20,7 @@ interface RequestsMiniListProps {
 
 /** Compact card with a tenant's open requests (up to three) and a "Report issue" link. */
 export function RequestsMiniList({ items, reportHref, allHref }: RequestsMiniListProps) {
+  const { date: formatDate } = useFormat()
   const open = items.filter((item) => isActiveRequest(item.request))
   const shown = open.slice(0, 3)
   return (
@@ -49,7 +51,7 @@ export function RequestsMiniList({ items, reportHref, allHref }: RequestsMiniLis
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {shown.map((item) => {
-              const { timing, text } = timingLine(item.request)
+              const { timing, text } = timingLine(item.request, formatDate)
               return (
                 <li key={item.request.id} className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
                   <Link

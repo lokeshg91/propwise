@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PropertyTimeline } from '@/features/properties/components/property-timeline'
 import { type TimelineItem, type UnitStats } from '@/features/properties/lib/property-detail'
 import { formatAddress, PROPERTY_TYPE_LABELS, UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber, formatPercent } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type Property } from '@/types'
 
 interface PropertyOverviewTabProps {
@@ -16,8 +16,6 @@ interface PropertyOverviewTabProps {
   onShowUnits: () => void
   onShowActivity: () => void
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
 
 export function PropertyOverviewTab({ property, stats, timeline, onShowUnits, onShowActivity }: PropertyOverviewTabProps) {
   return (
@@ -45,13 +43,14 @@ export function PropertyOverviewTab({ property, stats, timeline, onShowUnits, on
 }
 
 function PropertyInfoCard({ property }: { property: Property }) {
+  const { month: formatMonth, number: formatNumber } = useFormat()
   const items: Array<{ label: string; value: string }> = [
     { label: 'Address', value: formatAddress(property.location) },
     { label: 'Property type', value: PROPERTY_TYPE_LABELS[property.type] },
     { label: 'Total units', value: formatNumber(property.totalUnits) },
     { label: 'Year built', value: property.yearBuilt ? String(property.yearBuilt) : 'Not set' },
     { label: 'Building area', value: property.areaSqft ? `${formatNumber(property.areaSqft)} sq ft` : 'Not set' },
-    { label: 'In portfolio since', value: dateFormat.format(new Date(`${property.acquiredAt.slice(0, 10)}T12:00:00`)) },
+    { label: 'In portfolio since', value: formatMonth(property.acquiredAt.slice(0, 7), 'long') },
   ]
 
   return (
@@ -79,6 +78,7 @@ function PropertyInfoCard({ property }: { property: Property }) {
 }
 
 function OccupancyBreakdownCard({ stats, totalUnits }: { stats: UnitStats; totalUnits: number }) {
+  const { number: formatNumber, percent: formatPercent } = useFormat()
   const segments = [
     { label: 'Occupied', value: stats.occupied, color: 'bg-chart-1' },
     { label: 'Vacant', value: stats.vacant, color: 'bg-chart-5' },
@@ -127,6 +127,7 @@ function OccupancyBreakdownCard({ stats, totalUnits }: { stats: UnitStats; total
 }
 
 function UnitMixCard({ stats, onShowUnits }: { stats: UnitStats; onShowUnits: () => void }) {
+  const { amount: formatCurrency, percent: formatPercent } = useFormat()
   return (
     <Card className="min-w-0 lg:col-span-2">
       <CardHeader>

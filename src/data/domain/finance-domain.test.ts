@@ -301,7 +301,7 @@ describe('summaries', () => {
     units: [],
     leases: [],
     workOrders: [],
-    graceDays: 5,
+    rules: [{ id: 'rule_initial', effectiveFrom: '2025-11-01', graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 }, createdAt: 'x' }],
     ...overrides,
   })
 

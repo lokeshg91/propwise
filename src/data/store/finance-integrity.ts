@@ -1,7 +1,9 @@
-import { isActivePayment } from '@/data/domain/finance-rules'
+import { chargeState, isActivePayment, lateFeeBlock, paymentsByCharge, ruleFor, ruleProblems, RULE_LIMITS, suggestedLateFeeCents } from '@/data/domain/finance-rules'
+import { firstDayOf } from '@/data/domain/finance-schedule'
 import { isValidCents, toCents } from '@/data/domain/money'
-import { type DemoDatabase } from '@/data/store/demo-store'
+import { type DemoDatabase, type DemoDatabaseV5 } from '@/data/store/demo-store'
 import { REFERENCE_PREFIX, type ReferenceSeries, workOrderBillId } from '@/data/store/finance-reconcile'
+import { REPORT_RANGE_PRESETS } from '@/types'
 
 /**
  * Finance invariants. Run by the migration before it saves anything, by the
@@ -136,7 +138,63 @@ export function checkFinanceIntegrity(db: DemoDatabase): string[] {
     if (db.sequences[name] <= highest) fail(`sequence ${name} (${db.sequences[name]}) isn't ahead of ${highest}`)
   }
 
+  checkSettings(db, fail)
   return issues
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Settings invariants (v6): a valid, ordered rule history and valid workspace settings. */
+function checkSettings(db: DemoDatabase, fail: (message: string) => void) {
+  const { rules } = db.finance
+  if (!Array.isArray(rules) || rules.length === 0) {
+    fail('finance settings: no rule version')
+    return
+  }
+  const ids = new Set<string>()
+  rules.forEach((rule, index) => {
+    const label = `rule ${rule.id}`
+    if (ids.has(rule.id)) fail(`${label}: duplicate id`)
+    ids.add(rule.id)
+    if (!ISO_DATE.test(rule.effectiveFrom)) fail(`${label}: invalid start date ${rule.effectiveFrom}`)
+    const previous = rules[index - 1]
+    if (previous && rule.effectiveFrom <= previous.effectiveFrom) fail(`${label}: rule versions must start on increasing dates`)
+    for (const problem of ruleProblems(rule)) fail(`${label}: ${problem}`)
+  })
+  const first = rules[0]
+  if (first && first.effectiveFrom > firstDayOf(db.finance.startPeriod)) fail('finance settings: the first rule version starts after Finance history begins')
+  const terms = db.finance.paymentTermsDays
+  if (!Number.isInteger(terms) || terms < RULE_LIMITS.paymentTermsDays.min || terms > RULE_LIMITS.paymentTermsDays.max) fail(`finance settings: invalid payment terms ${terms}`)
+  if (!(REPORT_RANGE_PRESETS as readonly string[]).includes(db.appSettings?.defaultReportRange)) fail('app settings: invalid default report period')
+  const events = new Set<string>()
+  for (const event of db.settingsEvents ?? []) {
+    if (events.has(event.id)) fail(`settings event ${event.id}: duplicate id`)
+    events.add(event.id)
+  }
+}
+
+/**
+ * Fails unless every charge has the same outcome before and after a settings
+ * reshaping (the v5 → v6 upgrade): status, balance, days overdue, paid late,
+ * and for rent the late-fee eligibility and amount. `before` uses the inline
+ * v5 rule; `after` uses the rule versions.
+ */
+export function assertSameFinanceOutcomes(before: DemoDatabaseV5, after: DemoDatabase, today: string): void {
+  const payments = paymentsByCharge(after.payments)
+  const types = new Map(after.properties.map((property) => [property.id, property.type]))
+  const fees = new Set(after.charges.map((charge) => charge.parentChargeId).filter(Boolean))
+  const differences: string[] = []
+  for (const charge of after.charges) {
+    const list = payments.get(charge.id)
+    const old = chargeState(charge, list, today, before.finance.graceDays)
+    const rule = ruleFor(after.finance, charge.dueDate)
+    const now = chargeState(charge, list, today, rule.graceDays)
+    const type = types.get(charge.propertyId) ?? 'residential'
+    const oldFee = [lateFeeBlock(charge, old, today, before.finance.graceDays, fees.has(charge.id)), suggestedLateFeeCents(charge, type, before.finance)]
+    const newFee = [lateFeeBlock(charge, now, today, rule.graceDays, fees.has(charge.id)), suggestedLateFeeCents(charge, type, rule)]
+    if (JSON.stringify(old) !== JSON.stringify(now) || JSON.stringify(oldFee) !== JSON.stringify(newFee)) differences.push(charge.id)
+  }
+  if (differences.length > 0) throw new Error(`Finance outcomes changed for ${differences.length} charges (first: ${differences.slice(0, 5).join(', ')})`)
 }
 
 export function assertFinanceIntegrity(db: DemoDatabase): void {

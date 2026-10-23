@@ -18,20 +18,22 @@ import { WorkOrderPanel } from '@/features/maintenance/components/work-order-pan
 import { buildRequestTimeline } from '@/features/maintenance/lib/request-detail'
 import { locationLabel } from '@/features/maintenance/lib/request-list'
 import { HOLD_REASON_LABELS, SOURCE_LABELS } from '@/features/maintenance/lib/request-meta'
-import { formatDateTime, formatDuration, hoursUntil, timingLine } from '@/features/maintenance/lib/request-time'
+import { formatDuration, hoursUntil, timingLine } from '@/features/maintenance/lib/request-time'
 import { type requestDetailLoader } from '@/features/maintenance/maintenance.loaders'
-import { formatDate, formatRelativeTime } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
+import { formatRelativeTime } from '@/lib/format'
 
 const linkClass = 'rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
 
 export function RequestDetailsPage() {
+  const { date: formatDate, dateTime: formatDateTime } = useFormat()
   const detail = useLoaderData<typeof requestDetailLoader>()
   const { request, property, unit, tenant } = detail
   const revalidator = useRevalidator()
   const [action, setAction] = useState<RequestAction | null>(null)
 
   const timeline = useMemo(() => buildRequestTimeline(detail), [detail])
-  const { timing, text: timingText } = timingLine(request)
+  const { timing, text: timingText } = timingLine(request, formatDate)
   const where = locationLabel(detail)
   const reopenCheck = checkTransition(request, 'reopen', { hasActiveWorkOrder: false })
   const reopenUntil = request.completedAt ? toIsoDate(new Date(Date.parse(request.completedAt) + REOPEN_WINDOW_DAYS * 86_400_000)) : null

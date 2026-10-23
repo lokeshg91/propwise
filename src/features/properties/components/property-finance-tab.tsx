@@ -9,23 +9,19 @@ import { CashFlowCard } from '@/features/finance/components/cash-flow-card'
 import { CollectionsCard } from '@/features/finance/components/collections-card'
 import { DemoBadge } from '@/features/finance/components/finance-badges'
 import { FinanceKpis } from '@/features/finance/components/finance-kpis'
-import { MoneyProvider } from '@/features/finance/components/money-provider'
 import { ExpenseBreakdownCard, PayablesCard, RecentTransactionsCard, UpcomingCard } from '@/features/finance/components/overview-lists'
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { financeLinkClass } from '@/features/finance/lib/finance-styles'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 /** Finance for one property: the Finance overview scoped to it (last 12 months, cash basis). */
 export function PropertyFinanceTab({ finance, propertyId, propertyName }: { finance: PropertyFinance; propertyId: string; propertyName: string }) {
-  return (
-    <MoneyProvider settings={finance.settings}>
-      <Content finance={finance} propertyId={propertyId} propertyName={propertyName} />
-    </MoneyProvider>
-  )
+  return <Content finance={finance} propertyId={propertyId} propertyName={propertyName} />
 }
 
 function Content({ finance, propertyId, propertyName }: { finance: PropertyFinance; propertyId: string; propertyName: string }) {
+  const { date: formatDate } = useFormat()
   const money = useMoney()
   const id = encodeURIComponent(propertyId)
   return (

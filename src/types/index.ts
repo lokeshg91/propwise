@@ -67,7 +67,10 @@ export type {
   FinanceDemoScope,
   FinanceEvent,
   FinanceEventKind,
+  FinanceRule,
+  FinanceRuleVersion,
   FinanceSettings,
+  FinanceSettingsV5,
   IncomeCategory,
   Payment,
   PaymentMethod,
@@ -75,3 +78,5 @@ export type {
   RecurringCharge,
 } from './finance'
 export { EXPENSE_CATEGORIES, FINANCE_EVENT_KINDS, INCOME_CATEGORIES, PAYMENT_METHODS, RECURRING_CATEGORIES } from './finance'
+export type { AppSettings, ReportRangePreset, SettingsEvent, SettingsSection } from './settings'
+export { REPORT_RANGE_PRESETS, SETTINGS_SECTIONS } from './settings'

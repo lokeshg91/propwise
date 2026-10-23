@@ -7,15 +7,16 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { isActiveWorkOrder } from '@/data/domain/maintenance-rules'
 import { type VendorDetail } from '@/data/services'
 import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
-import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import { CategoryChips } from '@/features/vendors/components/vendor-badges'
 import { VendorPerformanceCard } from '@/features/vendors/components/vendor-performance-card'
 import { locationText } from '@/features/vendors/lib/vendor-detail'
-import { formatDate, formatMoney } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
+import { formatMoney } from '@/lib/format'
 
 const linkClass = 'rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
 
 export function VendorOverviewTab({ detail, onShowWorkOrders }: { detail: VendorDetail; onShowWorkOrders: () => void }) {
+  const { date: formatDate, dateTime: formatDateTime } = useFormat()
   const { vendor, performance } = detail
   const open = detail.workOrders.filter((entry) => isActiveWorkOrder(entry.order))
   const breakdown = [

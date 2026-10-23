@@ -6,10 +6,11 @@ import { PropertyActionsMenu } from '@/features/properties/components/property-a
 import { PropertyStatusBadge, PropertyTypeLabel } from '@/features/properties/components/property-badges'
 import { type PropertyListRow } from '@/features/properties/lib/property-list'
 import { formatAddress } from '@/features/properties/lib/property-meta'
-import { formatCurrency } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Card layout for the properties list on tablet and mobile. */
 export function PropertyCard({ row }: { row: PropertyListRow }) {
+  const { amount: formatCurrency } = useFormat()
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">

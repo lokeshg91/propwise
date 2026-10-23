@@ -297,3 +297,86 @@
     transform: translateX(300%);
   }
 }
+
+/*
+ * Report printing (Phase 9). Applies only while a report page is shown:
+ * no app chrome, no screen-only controls, every table row, table headers
+ * repeated on each page. The light theme is forced by the report page
+ * itself (it removes the dark class around printing).
+ */
+/* Report tables that scroll sideways: an always-visible scrollbar (not an overlay that hides). */
+.report-scroll[data-overflow] {
+  padding-bottom: 2px;
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent) var(--muted);
+}
+.report-scroll[data-overflow]::-webkit-scrollbar {
+  height: 10px;
+}
+.report-scroll[data-overflow]::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 9999px;
+}
+.report-scroll[data-overflow]::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+  border-radius: 9999px;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html:has([data-report-print]) {
+    background: #fff;
+  }
+  body:has([data-report-print]) {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body:has([data-report-print]) aside,
+  body:has([data-report-print]) header.sticky,
+  body:has([data-report-print]) [aria-label='Saving status'],
+  body:has([data-report-print]) [data-sonner-toaster],
+  body:has([data-report-print]) [data-report-noprint],
+  body:has([data-report-print]) a[href='#main-content'] {
+    display: none !important;
+  }
+  body:has([data-report-print]) div:has(> main#main-content) {
+    padding-left: 0 !important;
+  }
+  [data-report-print] {
+    max-width: none !important;
+    padding: 0 !important;
+    gap: 1rem !important;
+  }
+  [data-report-print] [data-slot='table-container'] {
+    overflow: visible !important;
+  }
+  [data-report-print] .report-table {
+    font-size: 8.5pt;
+  }
+  [data-report-print] .report-table th,
+  [data-report-print] .report-table td {
+    height: auto;
+    padding: 3pt 4pt;
+    white-space: normal;
+  }
+  /* Tables with many columns: smaller type so every column fits on A4 portrait. */
+  [data-report-print] .report-table-wide {
+    font-size: 6.5pt;
+  }
+  [data-report-print] .report-table-wide th,
+  [data-report-print] .report-table-wide td {
+    padding: 2pt 2.5pt;
+  }
+  [data-report-print] .report-table thead {
+    display: table-header-group;
+  }
+  [data-report-print] .report-table tfoot {
+    display: table-row-group;
+  }
+  [data-report-print] .report-table tr {
+    break-inside: avoid;
+  }
+}

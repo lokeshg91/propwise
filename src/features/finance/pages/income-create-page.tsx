@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { INCOME_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/data/domain/finance-labels'
-import { formatMonth } from '@/lib/format'
 import { parseMoneyInput } from '@/data/domain/money'
 import { createCharge, createRecurringCharge, isFinanceDuplicateError, isServiceError } from '@/data/services'
 import { ActionDialog, DuplicateMatches, type DuplicateMatch } from '@/features/finance/components/action-dialog'
@@ -23,6 +22,7 @@ import { MoneyInput } from '@/features/finance/components/money-input'
 import { useMoney } from '@/features/finance/hooks/use-money'
 import { emptyIncome, incomeSchema, type IncomeDraft, type IncomeValues } from '@/features/finance/lib/finance-schemas'
 import { type financeFormLoader } from '@/features/finance/finance.loaders'
+import { useFormat } from '@/hooks/use-format'
 import { PAYMENT_METHODS, RECURRING_CATEGORIES } from '@/types'
 
 const FIELD_MAP: Record<string, keyof IncomeDraft> = {
@@ -41,6 +41,7 @@ const FIELD_MAP: Record<string, keyof IncomeDraft> = {
 }
 
 export function IncomeCreatePage() {
+  const { month: formatMonth } = useFormat()
   const options = useLoaderData<typeof financeFormLoader>()
   const [params] = useSearchParams()
   const navigate = useNavigate()

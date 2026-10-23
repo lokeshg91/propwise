@@ -4,10 +4,7 @@ import { type ReactNode, useState, useSyncExternalStore } from 'react'
 import { StatusAlert } from '@/components/shared/status-alert'
 import { Button } from '@/components/ui/button'
 import { getStorageStatus, STORAGE_THRESHOLDS, subscribeStorageStatus } from '@/data/store/demo-store'
-import { formatPercent } from '@/lib/format'
-
-const percent = (usage: number) => formatPercent(Math.min(usage * 100, 100), 0)
-const REFUSE_AT = percent(STORAGE_THRESHOLDS.refuse)
+import { useFormat } from '@/hooks/use-format'
 
 /**
  * App-wide notice about saving, shown under the header on every page. The
@@ -18,6 +15,9 @@ const REFUSE_AT = percent(STORAGE_THRESHOLDS.refuse)
 export function StorageBanner() {
   const status = useSyncExternalStore(subscribeStorageStatus, getStorageStatus, getStorageStatus)
   const [hiddenWarning, setHiddenWarning] = useState(false)
+  const { percent: formatPercent } = useFormat()
+  const percent = (usage: number) => formatPercent(Math.min(usage * 100, 100), 0)
+  const REFUSE_AT = percent(STORAGE_THRESHOLDS.refuse)
 
   let banner: ReactNode = null
   if (status.mode === 'suspended') {

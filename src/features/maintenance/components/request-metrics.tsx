@@ -3,10 +3,11 @@ import { CircleCheckBig, ClipboardList, Hammer, TriangleAlert } from 'lucide-rea
 import { KpiCard } from '@/features/dashboard/components/kpi-card'
 import { type RequestSummary } from '@/features/maintenance/lib/request-list'
 import { formatDuration } from '@/features/maintenance/lib/request-time'
-import { formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Portfolio-wide maintenance metrics (not affected by list filters). */
 export function RequestMetrics({ summary }: { summary: RequestSummary }) {
+  const { number: formatNumber } = useFormat()
   return (
     <section aria-label="Maintenance metrics" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <KpiCard

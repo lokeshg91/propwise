@@ -5,9 +5,10 @@ import { type UnitRow } from '@/features/properties/components/unit-columns'
 import { UnitTenant } from '@/features/properties/components/unit-tenant'
 import { UnitStatusBadge } from '@/features/properties/components/unit-status-badge'
 import { UNIT_TYPE_LABELS } from '@/features/properties/lib/property-meta'
-import { formatCurrency, formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 export function UnitCard({ row, onEdit }: { row: UnitRow; onEdit: () => void }) {
+  const { amount: formatCurrency, number: formatNumber } = useFormat()
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-start justify-between gap-2">

@@ -177,19 +177,40 @@ export interface FinanceDemoScope {
   workOrderIds: string[]
 }
 
+/** The rent and late-fee rule values (one version of the rules). */
+export interface FinanceRule {
+  /** Days after the due date before rent counts as paid late and a late fee can be added. */
+  graceDays: number
+  lateFee: { residentialCents: number; commercialPercent: number }
+}
+
+/**
+ * One version of the rules, in force from `effectiveFrom` until the next
+ * version starts. A charge always uses the version in force on its due date,
+ * so a new version never changes charges that were already due.
+ */
+export interface FinanceRuleVersion extends FinanceRule {
+  id: string
+  /** First due date (YYYY-MM-DD) the version applies to. */
+  effectiveFrom: string
+  createdAt: string
+}
+
 export interface FinanceSettings {
-  /** ISO 4217 code with two minor digits, e.g. "USD". */
+  /** ISO 4217 code with two minor digits, e.g. "USD". The workspace currency. */
   currency: string
-  /** BCP 47 locale used for money formatting. */
+  /** BCP 47 locale: the workspace region, used for money, number and date formatting. */
   locale: string
   /** First month Finance tracks; fixed when the data was seeded or migrated. */
   startPeriod: string
-  /** Days after the due date before a late fee can be added. */
-  graceDays: number
-  lateFee: { residentialCents: number; commercialPercent: number }
+  /** Rule versions, oldest first; the first one starts on the first day of `startPeriod`. Append-only. */
+  rules: FinanceRuleVersion[]
   /** Default days from bill date to due date for new bills. */
   paymentTermsDays: number
   demoScope: FinanceDemoScope
   /** When the seed or migration created the finance data. */
   createdAt: string
 }
+
+/** Saved-data v5 (v0.8) shape of the settings: one rule, stored inline. */
+export interface FinanceSettingsV5 extends Omit<FinanceSettings, 'rules'>, FinanceRule {}

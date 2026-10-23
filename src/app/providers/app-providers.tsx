@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode } from 'react'
 import { Toaster } from 'sonner'
 
+import { SettingsProvider } from '@/app/providers/settings-provider'
 import { ThemeProvider } from '@/app/providers/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useTheme } from '@/hooks/use-theme'
@@ -25,10 +26,12 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider>
-      <TooltipProvider delayDuration={300}>
-        {children}
-        <ThemedToaster />
-      </TooltipProvider>
+      <SettingsProvider>
+        <TooltipProvider delayDuration={300}>
+          {children}
+          <ThemedToaster />
+        </TooltipProvider>
+      </SettingsProvider>
     </ThemeProvider>
   )
 }

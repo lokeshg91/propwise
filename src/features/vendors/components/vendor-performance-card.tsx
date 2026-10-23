@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MIN_JOBS_FOR_RATES, type VendorPerformance } from '@/data/domain/vendor-rules'
 import { basedOnLabel, formatOnTime, formatResolution, formatSpend, formatVariance } from '@/features/vendors/lib/vendor-meta'
-import { formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { cn } from '@/lib/utils'
 
 /**
@@ -12,10 +12,11 @@ import { cn } from '@/lib/utils'
  * without enough eligible jobs shows "Not enough data", never 0.
  */
 export function VendorPerformanceCard({ performance }: { performance: VendorPerformance }) {
+  const { amount, date: formatDate, percent } = useFormat()
   const items = [
     {
       label: 'On-time rate',
-      value: formatOnTime(performance.onTimeRate),
+      value: formatOnTime(performance.onTimeRate, percent),
       basis: performance.onTimeRate,
       help: 'Completed by the request’s resolution target ÷ eligible completed jobs. Reopened requests are excluded.',
     },
@@ -27,7 +28,7 @@ export function VendorPerformanceCard({ performance }: { performance: VendorPerf
     },
     {
       label: 'Total spend',
-      value: formatSpend(performance.totalSpend),
+      value: formatSpend(performance.totalSpend, amount),
       basis: performance.totalSpend,
       help: 'Final cost of completed jobs.',
     },

@@ -3,11 +3,11 @@ import { Link } from 'react-router'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { MaintenancePriorityBadge } from '@/features/maintenance/components/maintenance-badges'
 import { RequestActionsMenu } from '@/features/maintenance/components/request-actions-menu'
-import { CategoryLabel, RequestStatusBadge, TimingText } from '@/features/maintenance/components/request-badges'
+import { CategoryLabel } from '@/features/maintenance/components/request-badges'
+import { RequestStatusCell } from '@/features/maintenance/components/request-status-cell'
 import { VendorLink } from '@/features/maintenance/components/vendor-link'
 import { type RequestRow } from '@/features/maintenance/lib/request-list'
 import { REQUEST_STATUS_LABELS } from '@/features/maintenance/lib/request-meta'
-import { timingLine } from '@/features/maintenance/lib/request-time'
 import { formatRelativeTime } from '@/lib/format'
 
 const column = createDataTableColumnHelper<RequestRow>()
@@ -66,16 +66,7 @@ export function createRequestColumns({ showProperty = true }: { showProperty?: b
       id: 'status',
       header: 'Status',
       sortFn: 'text',
-      cell: (info) => {
-        const { request } = info.row.original
-        const { timing, text } = timingLine(request)
-        return (
-          <span className="flex flex-col items-start gap-1">
-            <RequestStatusBadge status={request.status} />
-            <TimingText timing={timing} text={text} />
-          </span>
-        )
-      },
+      cell: (info) => <RequestStatusCell request={info.row.original.request} />,
     }),
     column.accessor('vendorName', {
       id: 'vendor',

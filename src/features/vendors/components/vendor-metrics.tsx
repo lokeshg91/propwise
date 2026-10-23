@@ -2,10 +2,11 @@ import { ClipboardList, HardHat, UserRoundCheck, UserRoundX } from 'lucide-react
 
 import { KpiCard } from '@/features/dashboard/components/kpi-card'
 import { type VendorSummary } from '@/features/vendors/lib/vendor-list'
-import { formatNumber } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 /** Directory-wide vendor totals (not affected by list filters). */
 export function VendorMetrics({ summary }: { summary: VendorSummary }) {
+  const { number: formatNumber } = useFormat()
   return (
     <section aria-label="Vendor metrics" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <KpiCard

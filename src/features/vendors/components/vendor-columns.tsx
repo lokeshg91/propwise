@@ -1,10 +1,10 @@
 import { Link } from 'react-router'
 
+import { FormattedDate, FormattedNumber } from '@/components/shared/formatted'
 import { createDataTableColumnHelper } from '@/components/tables/data-table-features'
 import { VendorActionsMenu } from '@/features/vendors/components/vendor-actions-menu'
 import { CategoryChips, VendorStatusBadge } from '@/features/vendors/components/vendor-badges'
 import { type VendorRow } from '@/features/vendors/lib/vendor-list'
-import { formatDate, formatNumber } from '@/lib/format'
 
 const column = createDataTableColumnHelper<VendorRow>()
 
@@ -52,12 +52,12 @@ export const vendorColumns = column.columns([
   column.accessor('open', {
     header: 'Open jobs',
     meta: { align: 'end' },
-    cell: (info) => <span className={info.getValue() > 0 ? 'font-medium text-foreground' : 'text-muted-foreground'}>{formatNumber(info.getValue())}</span>,
+    cell: (info) => <span className={info.getValue() > 0 ? 'font-medium text-foreground' : 'text-muted-foreground'}><FormattedNumber value={info.getValue()} /></span>,
   }),
   column.accessor('completed', {
     header: 'Completed',
     meta: { align: 'end' },
-    cell: (info) => formatNumber(info.getValue()),
+    cell: (info) => <FormattedNumber value={info.getValue()} />,
   }),
   column.accessor('lastJobAt', {
     id: 'lastJob',
@@ -65,7 +65,9 @@ export const vendorColumns = column.columns([
     sortFn: 'text',
     cell: (info) =>
       info.getValue() ? (
-        <span className="whitespace-nowrap">{formatDate(info.getValue().slice(0, 10))}</span>
+        <span className="whitespace-nowrap">
+          <FormattedDate value={info.getValue().slice(0, 10)} />
+        </span>
       ) : (
         <span className="text-muted-foreground">No jobs yet</span>
       ),

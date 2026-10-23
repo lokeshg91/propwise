@@ -9,7 +9,7 @@ import { RequestsMiniList } from '@/features/maintenance/components/requests-min
 import { DetailList } from '@/components/shared/detail-list'
 import { LeaseAlert } from '@/features/tenants/components/lease-alert'
 import { LeaseStatusBadge } from '@/features/tenants/components/tenant-badges'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 import { type LeaseDisplayStatus } from '@/types'
 
 interface TenantOverviewTabProps {
@@ -23,6 +23,7 @@ interface TenantOverviewTabProps {
 }
 
 export function TenantOverviewTab({ detail, maintenance, leaseStatus, timeline, onShowLease, onShowActivity }: TenantOverviewTabProps) {
+  const { amount: formatCurrency, date: formatDate } = useFormat()
   const { tenant, lease, property } = detail
   const leaseRecord = detail.leases.find((entry) => entry.id === lease?.id)
   const current = lease?.status === 'active' || lease?.status === 'pending'

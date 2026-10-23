@@ -117,7 +117,7 @@ describe('storage banner', () => {
     // Covered end-to-end in the store tests; here the banner reacts to the suspended mode.
     const store = await import('@/data/store/demo-store')
     const seed = structuredClone(readDatabase()) as unknown as Record<string, unknown>
-    for (const key of ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance']) delete seed[key]
+    for (const key of ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance', 'appSettings', 'settingsEvents']) delete seed[key]
     seed.version = 4
     seed.sequences = { request: readDatabase().sequences.request }
     resetDemoData()

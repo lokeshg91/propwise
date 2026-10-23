@@ -9,14 +9,15 @@ import { Input } from '@/components/ui/input'
 import { type VendorMatch } from '@/data/domain/vendor-rules'
 import { type VendorWorkOrder } from '@/data/services'
 import { WorkOrderStatusBadge } from '@/features/maintenance/components/request-badges'
-import { formatDateTime } from '@/features/maintenance/lib/request-time'
 import { VendorStatusBadge } from '@/features/vendors/components/vendor-badges'
 import { locationText } from '@/features/vendors/lib/vendor-detail'
+import { useFormat } from '@/hooks/use-format'
 
 const linkClass = 'rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
 
 /** The open work orders affected by a deactivation, each linking to its request. */
 export function OpenJobsList({ jobs }: { jobs: VendorWorkOrder[] }) {
+  const { dateTime: formatDateTime } = useFormat()
   return (
     <ul className="flex max-h-60 flex-col divide-y divide-border overflow-y-auto rounded-lg border border-border" aria-label="Open work orders">
       {jobs.map((entry) => (

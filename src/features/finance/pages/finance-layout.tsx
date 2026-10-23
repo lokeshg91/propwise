@@ -1,14 +1,10 @@
-import { Outlet, useLoaderData } from 'react-router'
+import { Outlet } from 'react-router'
 
-import { MoneyProvider } from '@/features/finance/components/money-provider'
-import { type financeLayoutLoader } from '@/features/finance/finance.loaders'
-
-/** Provides the Finance currency to every Finance page. */
+/**
+ * Finance section layout. The currency and region come from the workspace
+ * settings (`SettingsProvider`), so the layout only renders the page; its
+ * loader makes sure Finance data is ready first.
+ */
 export function FinanceLayout() {
-  const { settings } = useLoaderData<typeof financeLayoutLoader>()
-  return (
-    <MoneyProvider settings={settings}>
-      <Outlet />
-    </MoneyProvider>
-  )
+  return <Outlet />
 }

@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 
+import { todayIso } from '@/data/domain/dates'
 import { isCurrentLease } from '@/data/domain/lease-rules'
 import { getRequestTiming, isActiveRequest } from '@/data/domain/maintenance-rules'
 import { assignVendor, completeRequest, createServiceRequest, startWork } from '@/data/services'
@@ -205,7 +206,7 @@ describe('Request lifecycle in the UI', () => {
 
   it('shows completed work-order cost and treats cancelled as final', async () => {
     const request = await createServiceRequest(requestInput(null), { assign: workOrder() })
-    await completeRequest(request.id, { completedOn: new Date().toISOString().slice(0, 10), actualCost: 315, notes: 'Replaced cartridge', returnUnitToVacant: false })
+    await completeRequest(request.id, { completedOn: todayIso(), actualCost: 315, notes: 'Replaced cartridge', returnUnitToVacant: false })
     const { unmount } = await openDetail(request.id)
     expect(screen.getByText('$315')).toBeInTheDocument()
     expect(screen.getByText('Replaced cartridge')).toBeInTheDocument()
@@ -225,7 +226,7 @@ describe('Request lifecycle in the UI', () => {
 
   it('doesn’t offer Reopen after 30 days', async () => {
     const request = await createServiceRequest(requestInput(null), { assign: workOrder() })
-    await completeRequest(request.id, { completedOn: new Date().toISOString().slice(0, 10), actualCost: null, notes: '', returnUnitToVacant: false })
+    await completeRequest(request.id, { completedOn: todayIso(), actualCost: null, notes: '', returnUnitToVacant: false })
     updateDatabase((draft) => {
       const entry = draft.serviceRequests.find((item) => item.id === request.id)
       if (entry) entry.completedAt = new Date(Date.now() - 40 * 86_400_000).toISOString()

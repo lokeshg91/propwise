@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type TrendPoint } from '@/data/domain/finance-summary'
 import { useMoney } from '@/features/finance/hooks/use-money'
-import { formatMonth } from '@/lib/format'
+import { useFormat } from '@/hooks/use-format'
 
 const SERIES = [
   { key: 'collectedCents', label: 'Collected', color: CHART_COLORS.primary },
@@ -18,6 +18,7 @@ const NET_COLOR = CHART_COLORS.tertiary
 
 /** Money in and out per month, with net cash flow as a line. */
 export function CashFlowCard({ trend }: { trend: TrendPoint[] }) {
+  const { month: formatMonth } = useFormat()
   const money = useMoney()
   const empty = trend.every((point) => point.collectedCents === 0 && point.expensesPaidCents === 0)
   const description = `Collected ${money(trend.reduce((sum, point) => sum + point.collectedCents, 0), { whole: true })} and paid ${money(
@@ -54,6 +55,7 @@ export function CashFlowCard({ trend }: { trend: TrendPoint[] }) {
 }
 
 function CashFlowTooltip({ active, payload, money }: TooltipContentProps & { money: (cents: number) => string }) {
+  const { month: formatMonth } = useFormat()
   const point = payload[0]?.payload as TrendPoint | undefined
   if (!active || !point) return null
   return (

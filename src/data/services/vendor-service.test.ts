@@ -1,3 +1,4 @@
+import { todayIso } from '@/data/domain/dates'
 import { assignVendor, completeRequest, createServiceRequest, reassignVendor, startWork } from '@/data/services/maintenance-service'
 import { isServiceError } from '@/data/services/service-error'
 import {
@@ -227,7 +228,7 @@ describe('deactivation, reactivation and assignment', () => {
 
     // The existing job can still be worked and completed…
     await startWork(first.id)
-    await completeRequest(first.id, { completedOn: new Date().toISOString().slice(0, 10), actualCost: 130, notes: '', returnUnitToVacant: false })
+    await completeRequest(first.id, { completedOn: todayIso(), actualCost: 130, notes: '', returnUnitToVacant: false })
     // …and the other one reassigned away to an active vendor.
     const other = db().vendors.find((entry) => entry.active && entry.id !== vendor.id) as Vendor
     await reassignVendor(second.id, { vendorId: other.id, scheduledFor: null, estimatedCost: 90, notes: '' }, 'Vendor inactive')

@@ -1,5 +1,4 @@
 import { getRequestTiming, type RequestTiming } from '@/data/domain/maintenance-rules'
-import { formatDate } from '@/lib/format'
 import { type ServiceRequest } from '@/types'
 
 /** "45 minutes", "5 hours", "3 days". */
@@ -16,14 +15,14 @@ export function formatDuration(hours: number): string {
 
 export const hoursUntil = (iso: string, now: Date = new Date()) => (new Date(iso).getTime() - now.getTime()) / 3_600_000
 
-/** Date and time, e.g. "Oct 24, 2026, 9:30 AM". */
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-}
-
-/** One-line timing summary for a request, e.g. "Overdue by 2 days". */
+/**
+ * One-line timing summary for a request, e.g. "Overdue by 2 days". Closed
+ * requests show their closing date, formatted with `formatDate` (the
+ * workspace date format from `useFormat()`).
+ */
 export function timingLine(
   request: Pick<ServiceRequest, 'status' | 'dueAt' | 'priority' | 'completedAt' | 'cancelledAt'>,
+  formatDate: (isoDate: string) => string,
   now: Date = new Date(),
 ): { timing: RequestTiming; text: string } {
   const timing = getRequestTiming(request, now)

@@ -46,6 +46,8 @@ afterEach(() => {
 })
 
 const FINANCE_KEYS = ['charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents', 'finance'] as const
+/** Added in v6 (Phase 9); a real v4 save has none of these. */
+const V6_KEYS = ['appSettings', 'settingsEvents'] as const
 const V4_COLLECTIONS = ['properties', 'units', 'events', 'tenants', 'leases', 'tenantEvents', 'vendors', 'vendorEvents', 'serviceRequests', 'workOrders', 'maintenanceEvents'] as const
 const stored = () => window.localStorage.getItem(STORAGE_KEYS.demoData)
 const storeRaw = (value: unknown) => window.localStorage.setItem(STORAGE_KEYS.demoData, JSON.stringify(value))
@@ -53,7 +55,7 @@ const storeRaw = (value: unknown) => window.localStorage.setItem(STORAGE_KEYS.de
 /** A Phase 7 (v4) database, as saved by v0.7.0. */
 function toV4(db: DemoDatabase): DemoDatabaseV4 {
   const copy = structuredClone(db) as unknown as Record<string, unknown>
-  for (const key of FINANCE_KEYS) delete copy[key]
+  for (const key of [...FINANCE_KEYS, ...V6_KEYS]) delete copy[key]
   copy.version = 4
   copy.sequences = { request: db.sequences.request }
   return copy as unknown as DemoDatabaseV4
@@ -92,12 +94,13 @@ function userV4(): DemoDatabaseV4 {
   return v4
 }
 
-describe('fresh installation (v5)', () => {
+describe('fresh installation (v6)', () => {
   it('seeds a consistent year of fictional finance history', () => {
     const db = readDatabase()
     expect(db.version).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(5)
-    expect(db.finance).toMatchObject({ currency: 'USD', locale: 'en-US', startPeriod: '2025-11', graceDays: 5, paymentTermsDays: 30 })
+    expect(SCHEMA_VERSION).toBe(6)
+    expect(db.finance).toMatchObject({ currency: 'USD', locale: 'en-US', startPeriod: '2025-11', paymentTermsDays: 30 })
+    expect(db.finance.rules).toEqual([expect.objectContaining({ id: 'rule_initial', effectiveFrom: '2025-11-01', graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 } })])
     expect(checkFinanceIntegrity(db)).toEqual([])
     // Every seeded record is marked as fictional demo data.
     for (const key of ['charges', 'payments', 'expenses', 'recurringCharges'] as const) expect(db[key].every((record) => record.demo === true)).toBe(true)
@@ -139,7 +142,7 @@ describe('fresh installation (v5)', () => {
   })
 })
 
-describe('Phase 7 (v4) → v5 migration', () => {
+describe('Phase 7 (v4) → v6 migration (adds Finance)', () => {
   it('keeps every Phase 2–7 record exactly and only adds Finance', () => {
     const v4 = userV4()
     const v5 = migrateDatabase(structuredClone(v4), NOW)
@@ -148,7 +151,7 @@ describe('Phase 7 (v4) → v5 migration', () => {
       expect(JSON.stringify(v5[key])).toBe(JSON.stringify(v4[key]))
     }
     expect(v5.sequences.request).toBe(v4.sequences.request)
-    expect(Object.keys(v5).sort()).toEqual([...Object.keys(v4), ...FINANCE_KEYS].sort())
+    expect(Object.keys(v5).sort()).toEqual([...Object.keys(v4), ...FINANCE_KEYS, ...V6_KEYS].sort())
     expect(checkFinanceIntegrity(v5)).toEqual([])
   })
 
@@ -190,7 +193,7 @@ describe('Phase 7 (v4) → v5 migration', () => {
     storeRaw(userV4())
     const first = readDatabase()
     const raw = stored() ?? ''
-    expect(JSON.parse(raw)).toMatchObject({ version: 5, encoding: 'columns-1' })
+    expect(JSON.parse(raw)).toMatchObject({ version: 6, encoding: 'columns-1' })
     expect(parseStoredDatabase(raw)).toEqual(first)
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, raw)
@@ -218,7 +221,7 @@ describe('Phase 7 (v4) → v5 migration', () => {
     migrationHooks.beforeCommit = () => undefined
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, before ?? '')
-    expect(readDatabase().version).toBe(5)
+    expect(readDatabase().version).toBe(6)
     expect(isPersistenceSuspended()).toBe(false)
   })
 
@@ -235,12 +238,12 @@ describe('Phase 7 (v4) → v5 migration', () => {
     expect(isPersistenceSuspended()).toBe(true)
   })
 
-  it('chains v1 → v5 with consistent finance data', () => {
+  it('chains v1 → v6 with consistent finance data', () => {
     const properties = structuredClone(seedProperties)
     const v1: DemoDatabaseV1 = { version: 1, properties, units: generateSeedUnits(properties), events: [] }
     storeRaw(v1)
     const db = readDatabase()
-    expect(db.version).toBe(5)
+    expect(db.version).toBe(6)
     expect(db.units).toEqual(v1.units)
     expect(db.charges.length).toBeGreaterThan(1000)
     expect(checkFinanceIntegrity(db)).toEqual([])
