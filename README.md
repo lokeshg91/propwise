@@ -2,9 +2,9 @@
 
 **Property & Facility Management Admin Dashboard** — a premium, responsive React template for residential and commercial property managers.
 
-> **Status:** v0.9.0 — design system, application shell, dashboard overview, the Properties, Tenants, Maintenance, Vendors and Finance modules, Reports and Settings. See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
+> **Status:** v0.10.0 — design system, application shell, dashboard overview, the Properties, Tenants, Maintenance, Vendors and Finance modules, Reports, Settings, Staff, Notifications, Account, demo sign-in flows and policy pages. See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
 
-Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payment processing, email or SMS integrations. Finance records payments; it never moves money. Connect it to your own APIs through the service layer in `src/data/services/`.
+Propwise is a **frontend-only** template. It uses local mock data and has no backend, database, real authentication, payment processing, email or SMS integrations. Finance records payments; it never moves money. Sign-in, sign-up, password and invitation flows are labelled demos: no account is created, no email is sent and no password is stored. Connect it to your own APIs through the service layer in `src/data/services/`.
 
 ---
 
@@ -80,7 +80,8 @@ propwise/
 │   │   └── tables/          # Data-table building blocks
 │   ├── features/            # Feature modules (one folder per domain)
 │   │   ├── dashboard/  properties/  tenants/  maintenance/  vendors/
-│   │   └── finance/    reports/     staff/    settings/
+│   │   ├── finance/    reports/     staff/    notifications/  settings/
+│   │   └── account/    auth/        legal/
 │   ├── hooks/               # Shared React hooks
 │   ├── lib/                 # Utilities and helpers
 │   ├── data/
@@ -109,7 +110,7 @@ propwise/
 
 ## Features
 
-- **Design tokens:** semantic CSS variables for light and dark themes (background, surface, text, primary, status colours, charts and sidebar), a type scale, radius and elevation scale. All text pairs meet WCAG AA.
+- **Design tokens:** semantic CSS variables for light and dark themes (background, surface, text, primary, status colours, charts and sidebar), a type scale, radius and elevation scale. All text pairs meet WCAG AA except where documented, notably the Dashboard's maintenance "Open" label in dark mode, which measures 4.14:1 (see [Known limitations](#known-limitations)).
 - **Theme modes:** Light, Dark and System, saved in `localStorage` and applied before first paint, so there is no flash. System mode follows OS changes live.
 - **Application shell:** a 248px sidebar that collapses to a 72px icon rail (with tooltips and a saved state), a mobile drawer below 1024px, and a header with breadcrumbs, ⌘K page search, notifications, theme switcher and profile menu.
 - **Dashboard overview:**
@@ -160,7 +161,17 @@ propwise/
   - **Data & storage:** storage meter, Download backup, Restore from backup, Reset workspace (backup required first, typed confirmation) and the settings change history.
   - Currency and region apply to every module except the Dashboard.
 - **Data tables:** a reusable `DataTable` built on TanStack Table v9 with sorting, search, pagination and empty states. Below 1024px it switches to a card layout with a "Sort by" control.
-- **Routing:** code-split routes with React Router 8, a data loader for shell data, placeholder pages for upcoming modules, a 404 page and an error boundary.
+- **Staff** (details in [`docs/staff.md`](docs/staff.md)):
+  - A team directory with counts, search (name, job title, email, phone digits, property), status, role and property filters kept in the URL, sorting and cards on mobile. Your own row is marked **You**.
+  - **Roles and access:** six fixed roles and a read-only access matrix. Roles describe access; they aren't enforced in the demo.
+  - Add, edit, deactivate, reactivate and delete members, with property assignments and a full history. Email addresses are unique across the team. You can't deactivate, delete or change the role of yourself, and the last active Owner or Admin is protected.
+- **Notifications** (details in [`docs/notifications.md`](docs/notifications.md)):
+  - One saved inbox for the header menu, the sidebar badge and `/notifications`, with read-status and type filters in the URL, Open, Mark read/unread and Mark all read.
+  - Event notifications for payments recorded, bills becoming overdue, maintenance requests created or overdue, leases entering their last 30 days and tenants added. Ids are deterministic (no duplicates) and the preferences on `/account` are respected.
+- **Account** (`/account`, details in [`docs/account.md`](docs/account.md)): profile with an optional photo (resized in the browser to 256 × 256 px), a demo change-password form, in-app notification preferences and sign out. The header shows the saved profile.
+- **Demo authentication** (details in [`docs/auth.md`](docs/auth.md)): sign in, sign up, forgot and reset password, and email verification pages with validation and visible Demo notices. A demo session (signed in by default) and a route guard send signed-out visits to `/login?next=…` and return you afterwards.
+- **Policy pages:** Privacy, Terms and Cookies sample texts at `/privacy`, `/terms` and `/cookies`, with operator placeholders in `src/features/legal/lib/policies.ts`. They are **sample content, not legal advice**; review and replace them before production use.
+- **Routing:** code-split routes with React Router 8, a data loader for shell data with the sign-in guard, a 404 page and an error boundary.
 - **Accessibility:** a skip link, visible focus rings, labelled icon buttons and keyboard-operable menus and dialogs. Status is never shown by colour alone.
 
 ## Routes
@@ -168,7 +179,13 @@ propwise/
 | Path | Page |
 | ---- | ---- |
 | `/` | Redirects to `/dashboard` |
-| `/login` | Demo sign-in (no authentication) |
+| `/login` | Demo sign-in (`?next=` returns to a same-app path afterwards) |
+| `/signup` | Demo sign-up (nothing is created) |
+| `/forgot-password` | Demo password reset request |
+| `/check-email` | "Check your email" step with the demo link (`?for=reset\|verify`) |
+| `/reset-password` | Demo new password (`?token=`) |
+| `/verify-email` | Demo email verification (`?token=`) |
+| `/privacy`, `/terms`, `/cookies` | Policy pages (public; sample text) |
 | `/dashboard` | Overview |
 | `/properties` | Properties listing |
 | `/properties/new` | Add property |
@@ -201,7 +218,12 @@ propwise/
 | `/reports/property-performance` | Property performance (period filters) |
 | `/reports/maintenance-expenses` | Maintenance expenses (period filters, `?view=property\|payee\|category`, `?basis=paid\|incurred`) |
 | `/settings` | Settings (`?tab=general\|finance\|rules\|data`) |
-| `/staff`, `/notifications` | Management modules (placeholders) |
+| `/staff` | Staff directory (`?q=`, `?status=active\|inactive\|all`, `?role=`, `?property=<id>\|unassigned`, `?tab=roles`) |
+| `/staff/new` | Add staff member |
+| `/staff/:staffId` | Member details (`?tab=overview\|properties\|activity`) |
+| `/staff/:staffId/edit` | Edit staff member |
+| `/notifications` | Notifications (`?status=all\|unread\|read`, `?category=maintenance\|payment\|lease\|tenant\|system`) |
+| `/account` | Your profile, password (demo), notification preferences and sign out |
 | `*` | Not found |
 
 ## Data layer
@@ -210,12 +232,12 @@ The template ships with realistic, fictional sample data. Nothing is sent to a s
 
 | Layer | Location | Purpose |
 | ----- | -------- | ------- |
-| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `ServiceRequest`, `WorkOrder`, `Vendor`, `VendorEvent`, `Charge`, `Payment`, `Expense`, `RecurringCharge`, `FinanceEvent`, `FinanceSettings`, `FinanceRuleVersion`, `AppSettings`, `SettingsEvent`, `RentPayment` (Dashboard), `Activity`, `PortfolioSnapshot`, dashboard view models |
+| Types | `src/types/` | `Property`, `Unit`, `Tenant`, `Lease`, `ServiceRequest`, `WorkOrder`, `Vendor`, `VendorEvent`, `Charge`, `Payment`, `Expense`, `RecurringCharge`, `FinanceEvent`, `FinanceSettings`, `FinanceRuleVersion`, `AppSettings`, `SettingsEvent`, `Account`, `StaffMember`, `StaffEvent`, `StoredNotification`, `AppNotification`, `RentPayment` (Dashboard), `Activity`, `PortfolioSnapshot`, dashboard view models |
 | Mock data | `src/data/mock/` | Sample records. Dates are relative to today, so the demo always looks current |
-| Services | `src/data/services/` | Async functions such as `getDashboardData()`, `getIncomeExpenseReport()` (`report-service.ts`), `updateCurrency()` and `addRuleVersion()` (`settings-service.ts`), `restoreBackup()` and `resetWorkspaceData()` (`backup-service.ts`). Replace their bodies with API calls |
+| Services | `src/data/services/` | Async functions such as `getDashboardData()`, `getIncomeExpenseReport()` (`report-service.ts`), `updateCurrency()` and `addRuleVersion()` (`settings-service.ts`), `restoreBackup()` and `resetWorkspaceData()` (`backup-service.ts`), `getCurrentUser()` and `updateProfile()` (`account-service.ts`), `createStaff()` and `setStaffActive()` (`staff-service.ts`), `getNotifications()` and `markAllNotificationsRead()` (`notification-service.ts`). Replace their bodies with API calls |
 | Selectors | `src/features/dashboard/lib/` | Pure functions that filter and aggregate data for each widget (unit-tested) |
-| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`), maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`), vendor rules (`normalizeVendorName`, `findVendorConflicts`, `getVendorPerformance`) Finance rules (`money.ts`, `finance-rules.ts` with `ruleFor`, `finance-schedule.ts`, `finance-summary.ts`) and reports (`report-range.ts`, `report-*.ts`), shared by services and UI |
-| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders, Finance records and every history, saved to `localStorage` (`propwise-demo-data`, schema v6, compact column format). Each write is a transaction that is reconciled and saved before it replaces the data in memory. `resetDemoData()` restores the sample data |
+| Domain rules | `src/data/domain/` | Date helpers, lease rules (`getLeaseDisplayStatus`, `getTenantStatus`), maintenance rules (`TRANSITIONS`, `checkTransition`, `SLA_HOURS`, `getRequestTiming`), vendor rules (`normalizeVendorName`, `findVendorConflicts`, `getVendorPerformance`) Finance rules (`money.ts`, `finance-rules.ts` with `ruleFor`, `finance-schedule.ts`, `finance-summary.ts`), reports (`report-range.ts`, `report-*.ts`), account rules (`account-rules.ts`), staff rules (`staff-rules.ts` with `ROLE_ACCESS`) and notification rules (`notification-rules.ts`), shared by services and UI |
+| Demo store | `src/data/store/demo-store.ts` | Properties, units, tenants, leases, vendors, maintenance requests, work orders, Finance records, your profile, staff, notifications and every history, saved to `localStorage` (`propwise-demo-data`, schema v7, compact column format). Each write is a transaction that is reconciled and saved before it replaces the data in memory. `resetDemoData()` restores the sample data |
 | Finance integrity | `src/data/store/finance-integrity.ts`, `finance-reconcile.ts` | `checkFinanceIntegrity()` validates every link and amount; `reconcileFinance()` posts rent and recurring charges and creates work-order bills (idempotent) |
 
 Route loaders call services, and pages derive what they display through selectors. To connect a real backend, change the service functions only; the components stay the same.
@@ -294,6 +316,8 @@ Saved data is upgraded automatically on first load, one step at a time, and ever
 
 - **v5 → v6 (from v0.8):** every v0.8 collection is carried over unchanged. The v0.8 grace period and late fees become the first rule version (effective from the first day of Finance history, same values); workspace settings (`appSettings`) and an empty settings history (`settingsEvents`) are added. The result must pass `checkFinanceIntegrity()`, and every charge keeps the same derived status, balance, days overdue and late-fee eligibility.
 
+- **v6 → v7 (from v0.9):** every v0.9 field is carried over byte for byte. The sample account (Alex Morgan, Portfolio Manager, all notification types on), the sample team (you as Owner plus 8 fictional members, one inactive) with its history, and the five sample notifications (three unread) are added. `notificationsCheckedAt` is set to the moment of the upgrade, so earlier events in the history are never notified. v7 data saved before the team or the inbox existed is completed the same way.
+
 Backups (Settings → Data & storage) hold the saved data as stored; restoring one runs it through the same upgrade chain and integrity check before it replaces the workspace.
 
 Because every id is fixed, running the migration again never creates duplicates. The upgraded data is saved immediately. If an upgrade fails, the stored data is left untouched and the app runs on sample data in read-only mode for that session (the storage banner says so, and every change is refused); the upgrade is retried on the next load.
@@ -310,6 +334,25 @@ Because every id is fixed, running the migration again never creates duplicates.
 - Maintenance activity entries keep the vendor name used at the time as plain text; they don't link to the vendor.
 - All data is stored in `localStorage` in one browser, within a 5,000,000-character budget. Clearing site data, Settings → Data & storage → Reset workspace, or calling `resetDemoData()` restores the sample data.
 - Sample Finance history isn't refreshed, so newly posted months become due and overdue as time passes.
+- Authentication, password changes, email verification and staff invitations are demos: nothing is created, sent or stored, and any valid email and password signs in. Replace them with your auth provider (see [`docs/auth.md`](docs/auth.md)).
+- Staff roles describe access only; they aren't enforced, and property assignments don't filter other modules.
+- Notifications are in-app only (no email or push), date events are noticed when the app is opened or saves something, and only the newest 200 event notifications are kept. A saved workspace gains unread notifications over time as sample requests and leases reach their dates.
+- In dark mode, the Dashboard's maintenance "Open" label measures 4.14:1, below WCAG AA's 4.5:1. It's unchanged since v0.8.0 and kept so the Dashboard stays pixel-identical; the Maintenance pages meet AA.
+- Two interaction states fall just below WCAG AA's 4.5:1: a destructive button hovered in light mode on the page background measures 4.40:1 (5.22:1 at rest), and a destructive menu item that is focused or highlighted in dark mode measures 4.43:1 (6.34:1 at rest). Both are unchanged since v0.9.0. See [`docs/design-system.md`](docs/design-system.md).
+- **Browser testing:** v0.10.0 was tested automatically in Chromium. Safari and Firefox haven't been tested yet; manual testing is pending.
+
+### Browser storage
+
+Propwise uses no cookies. It keeps four `localStorage` keys, listed in `STORAGE_KEYS` (`src/lib/storage.ts`) and described on the Cookies page from `STORAGE_ENTRIES` (`src/features/legal/lib/policies.ts`):
+
+| Key | Holds |
+| --- | --- |
+| `propwise-demo-data` | The whole workspace, including your profile, staff and notifications. Never a password |
+| `propwise-theme` | Light, dark or system |
+| `propwise-sidebar-collapsed` | Whether the sidebar is collapsed |
+| `propwise-session` | Set only after **Sign out** (`{"status":"signed-out","at":…}`); absent means signed in |
+
+If you add persisted data, update `STORAGE_KEYS`, `STORAGE_ENTRIES` and the Privacy page in the same change; a unit test checks that every key is disclosed.
 
 ## Theming
 

@@ -1,5 +1,5 @@
 export { getDashboardData } from './dashboard-service'
-export { getNotifications } from './notification-service'
+export { getNotifications, markAllNotificationsRead, readNotifications, setNotificationRead, subscribeNotifications, toAppNotification } from './notification-service'
 export {
   createProperty,
   createUnit,
@@ -25,7 +25,22 @@ export {
   type TenantListItem,
   updateTenant,
 } from './tenant-service'
-export { getCurrentUser } from './user-service'
+export type { StaffDetail, StaffListItem, StaffProperty } from './staff-service'
+export { createStaff, deleteStaff, findStaffByEmail, getStaffDetail, getStaffList, getStaffPropertyOptions, setStaffActive, updateStaff } from './staff-service'
+export type { ProfileInput } from './account-service'
+export {
+  ACCOUNT_LIMITS,
+  AVATAR_MAX_CHARS,
+  AVATAR_MAX_PIXELS,
+  getAccount,
+  getCurrentUser,
+  NOTIFICATION_CATEGORIES,
+  readCurrentUser,
+  subscribeAccount,
+  toUser,
+  updateNotificationPreferences,
+  updateProfile,
+} from './account-service'
 export {
   assignVendor,
   type CancelRequestInput,

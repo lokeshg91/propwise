@@ -1,7 +1,7 @@
 import { todayIso } from '@/data/domain/dates'
 import { addPeriods, firstDayOf, periodOf } from '@/data/domain/finance-schedule'
 import { addDemoHistory, buildDemoRecurring } from '@/data/mock/finance-seed'
-import { type DemoDatabase, type DemoDatabaseV4, type DemoDatabaseV5 } from '@/data/store/demo-store'
+import { type DemoDatabaseV4, type DemoDatabaseV5, type DemoDatabaseV6 } from '@/data/store/demo-store'
 import { reconcileFinance } from '@/data/store/finance-reconcile'
 import { DEFAULT_CURRENCY } from '@/lib/format'
 import { type AppSettings, type FinanceDemoScope, type FinanceRule, type FinanceRuleVersion, type FinanceSettings } from '@/types'
@@ -38,15 +38,15 @@ export function defaultFinanceSettings(now: Date, demoScope: FinanceDemoScope): 
 }
 
 /**
- * v4 → current: adds Finance (and the v6 settings). Every v4 collection is
+ * v4 → v6: adds Finance (and the v6 settings). Every v4 collection is
  * carried over untouched; only new collections, finance settings and three
  * sequence counters are added. Rent and recurring charges come from
  * reconciliation; fictional payments, fees and bills are added only for
  * records in `demoScope`. With the single initial rule version this produces
  * exactly the records v0.8 produced in its v4 → v5 step.
  */
-export function addFinance(v4: DemoDatabaseV4, now: Date, demoScope: FinanceDemoScope): DemoDatabase {
-  const db: DemoDatabase = {
+export function addFinance(v4: DemoDatabaseV4, now: Date, demoScope: FinanceDemoScope): DemoDatabaseV6 {
+  const db: DemoDatabaseV6 = {
     ...v4,
     version: 6,
     sequences: { ...v4.sequences, ...FIRST_REFERENCE },
@@ -73,7 +73,7 @@ export function addFinance(v4: DemoDatabaseV4, now: Date, demoScope: FinanceDemo
  * settings history are added. Every record collection, the sequences and
  * every other setting are copied unchanged.
  */
-export function upgradeToV6(v5: DemoDatabaseV5): DemoDatabase {
+export function upgradeToV6(v5: DemoDatabaseV5): DemoDatabaseV6 {
   const { graceDays, lateFee, ...finance } = v5.finance
   return {
     ...v5,

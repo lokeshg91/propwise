@@ -10,6 +10,7 @@ import { getStorageStatus, STORAGE_THRESHOLDS, subscribeStorageStatus } from '@/
 import { BackupStep, InspectionSummary, RecordCountsTable } from '@/features/settings/components/backup-parts'
 import { ResetDialog } from '@/features/settings/components/reset-dialog'
 import { RestoreDialog } from '@/features/settings/components/restore-dialog'
+import { PolicyLinks } from '@/features/legal/components/policy-links'
 import { SaveError, SettingsCard } from '@/features/settings/components/settings-card'
 import { SETTINGS_TAB_LABELS } from '@/features/settings/lib/settings-tabs'
 import { useBackupDownload } from '@/features/settings/hooks/use-backup-download'
@@ -71,6 +72,10 @@ function StorageCard({ summary }: { summary: WorkspaceSummary }) {
         </p>
       </div>
       {records !== null ? <p className="text-body text-muted-foreground">{number(records)} records in this workspace.</p> : null}
+      <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+        <p className="text-caption text-muted-foreground">How Propwise stores and uses your data:</p>
+        <PolicyLinks labels="full" />
+      </div>
     </SettingsCard>
   )
 }

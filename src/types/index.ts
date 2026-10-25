@@ -18,7 +18,8 @@ export type {
   RevenueSummary,
 } from './dashboard'
 export { DATE_RANGES, PROPERTY_TYPE_FILTERS } from './dashboard'
-export type { AppNotification, NotificationCategory } from './notification'
+export type { AppNotification, NotificationCategory, NotificationKind, StoredNotification } from './notification'
+export { NOTIFICATION_KINDS } from './notification'
 export type { PaymentStatus, RentPayment } from './payment'
 export { PAYMENT_STATUSES } from './payment'
 export type { PortfolioSnapshot } from './portfolio'
@@ -80,3 +81,6 @@ export type {
 export { EXPENSE_CATEGORIES, FINANCE_EVENT_KINDS, INCOME_CATEGORIES, PAYMENT_METHODS, RECURRING_CATEGORIES } from './finance'
 export type { AppSettings, ReportRangePreset, SettingsEvent, SettingsSection } from './settings'
 export { REPORT_RANGE_PRESETS, SETTINGS_SECTIONS } from './settings'
+export type { Account, AccountProfile, NotificationPreferences } from './account'
+export type { StaffEvent, StaffEventKind, StaffInput, StaffMember, StaffRole } from './staff'
+export { STAFF_EVENT_KINDS, STAFF_ROLES } from './staff'

@@ -119,7 +119,7 @@ describe('v0.8.0 release: upgrade from v0.7 data with user records', () => {
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, JSON.stringify(v4))
     const db = readDatabase()
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(7)
     for (const key of Object.keys(snapshot) as Array<keyof DemoDatabaseV4>) {
       if (key === 'version' || key === 'sequences') continue
       expect(db[key as keyof DemoDatabase], key).toEqual(snapshot[key])

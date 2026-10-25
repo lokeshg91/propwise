@@ -3,7 +3,7 @@ import { addPeriods, firstDayOf, lastDayOf, periodRange } from '@/data/domain/fi
 import { chargeState, graceFor, paymentsByCharge, ruleFor, suggestedLateFeeCents } from '@/data/domain/finance-rules'
 import { percentOfCents, sumCents } from '@/data/domain/money'
 import { hashString } from '@/data/mock/tenancy-seed'
-import { type DemoDatabase } from '@/data/store/demo-store'
+import { type FinanceData } from '@/data/store/demo-store'
 import { nextReference } from '@/data/store/finance-reconcile'
 import {
   type Charge,
@@ -38,7 +38,7 @@ const METHODS_COMMERCIAL: PaymentMethod[] = ['bank-transfer', 'bank-transfer', '
 /* -------------------------------------------------------------- schedules */
 
 /** Parking for some residential sample leases and service charges (CAM) for commercial ones. */
-export function buildDemoRecurring(db: DemoDatabase, now: string): RecurringCharge[] {
+export function buildDemoRecurring(db: FinanceData, now: string): RecurringCharge[] {
   const scope = new Set(db.finance.demoScope.leaseIds)
   const properties = new Map(db.properties.map((property) => [property.id, property]))
   const schedules: RecurringCharge[] = []
@@ -78,7 +78,7 @@ export function buildDemoRecurring(db: DemoDatabase, now: string): RecurringChar
 
 /* --------------------------------------------------------------- history */
 
-export function addDemoHistory(db: DemoDatabase, today: string, now: string): void {
+export function addDemoHistory(db: FinanceData, today: string, now: string): void {
   const leases = new Map(db.leases.map((lease) => [lease.id, lease]))
   const properties = new Map(db.properties.map((property) => [property.id, property]))
   const pay = (charge: Charge, amountCents: number, receivedOn: string, method: PaymentMethod, index: number) => {
@@ -170,7 +170,7 @@ export function addDemoHistory(db: DemoDatabase, today: string, now: string): vo
 type Pay = (charge: Charge, amountCents: number, receivedOn: string, method: PaymentMethod, index: number) => Payment
 
 /** The active commercial sample lease that showcases 60+ days of arrears. */
-function pickArrearsLease(db: DemoDatabase, today: string): string | null {
+function pickArrearsLease(db: FinanceData, today: string): string | null {
   const scope = new Set(db.finance.demoScope.leaseIds)
   const commercial = new Set(db.properties.filter((property) => property.type === 'commercial').map((property) => property.id))
   const candidates = db.leases
@@ -179,7 +179,7 @@ function pickArrearsLease(db: DemoDatabase, today: string): string | null {
   return candidates[0]?.id ?? null
 }
 
-function addLateFees(db: DemoDatabase, today: string, now: string, pay: Pay) {
+function addLateFees(db: FinanceData, today: string, now: string, pay: Pay) {
   const payments = paymentsByCharge(db.payments)
   const properties = new Map(db.properties.map((property) => [property.id, property]))
   for (const charge of [...db.charges]) {
@@ -216,7 +216,7 @@ function addLateFees(db: DemoDatabase, today: string, now: string, pay: Pay) {
 
 const LAUNDRY_PROPERTIES = ['prop_101', 'prop_102', 'prop_105']
 
-function addLaundryIncome(db: DemoDatabase, today: string, now: string, pay: Pay) {
+function addLaundryIncome(db: FinanceData, today: string, now: string, pay: Pay) {
   const scope = new Set(db.finance.demoScope.propertyIds)
   for (const propertyId of LAUNDRY_PROPERTIES) {
     if (!scope.has(propertyId)) continue
@@ -273,7 +273,7 @@ const SPECS: ExpenseSpec[] = [
   { category: 'maintenance', vendorId: 'ven_apex-elevator-services', payee: 'Apex Elevator Services', description: 'Quarterly elevator service contract', billDay: 12, termsDays: 30, perUnitCents: 4500, months: [1, 4, 7, 10], invoicePrefix: 'AES', fixed: true, commercial: true },
 ]
 
-function addOperatingExpenses(db: DemoDatabase, today: string, now: string) {
+function addOperatingExpenses(db: FinanceData, today: string, now: string) {
   const scope = new Set(db.finance.demoScope.propertyIds)
   const vendors = new Set(db.vendors.map((vendor) => vendor.id))
   const periods = periodRange(db.finance.startPeriod, today.slice(0, 7))
@@ -357,7 +357,7 @@ function settle(expense: Expense, today: string, leaveOpen: boolean) {
 }
 
 /** Sample work-order bills: paid when completed more than 21 days ago, except one left overdue. */
-function settleWorkOrderBills(db: DemoDatabase, today: string) {
+function settleWorkOrderBills(db: FinanceData, today: string) {
   const bills = db.expenses.filter((expense) => expense.demo && expense.source === 'work-order').sort((a, b) => a.billDate.localeCompare(b.billDate))
   const overdue = bills.find((bill) => bill.dueDate < today)
   for (const bill of bills) {
@@ -369,7 +369,7 @@ function settleWorkOrderBills(db: DemoDatabase, today: string) {
 }
 
 /** A returned check (voided payment, then paid again) and a charge voided as an entry error. */
-function addShowcaseVoids(db: DemoDatabase, today: string, now: string, pay: Pay) {
+function addShowcaseVoids(db: FinanceData, today: string, now: string, pay: Pay) {
   const charges = new Map(db.charges.map((charge) => [charge.id, charge]))
   const events: FinanceEvent[] = []
   const check = db.payments

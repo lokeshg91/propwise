@@ -11,9 +11,15 @@ import {
 import { cn } from '@/lib/utils'
 import { type RequestCategory, type RequestStatus, type WorkOrderStatus } from '@/types'
 
+/**
+ * Dark mode: the "Open" (brand) tint is lighter than the shared brand badge so its text meets WCAG AA (4.5:1) on cards.
+ * Scoped to Maintenance: the Dashboard's own "Open" label is unchanged (it must stay pixel-identical).
+ */
+const STATUS_CLASS: Partial<Record<RequestStatus, string>> = { open: 'dark:bg-primary/8' }
+
 export function RequestStatusBadge({ status }: { status: RequestStatus }) {
   return (
-    <Badge variant={REQUEST_STATUS_TONES[status]}>
+    <Badge variant={REQUEST_STATUS_TONES[status]} className={STATUS_CLASS[status]}>
       <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
       {REQUEST_STATUS_LABELS[status]}
     </Badge>

@@ -1,7 +1,7 @@
 import { chargeState, isActivePayment, lateFeeBlock, paymentsByCharge, ruleFor, ruleProblems, RULE_LIMITS, suggestedLateFeeCents } from '@/data/domain/finance-rules'
 import { firstDayOf } from '@/data/domain/finance-schedule'
 import { isValidCents, toCents } from '@/data/domain/money'
-import { type DemoDatabase, type DemoDatabaseV5 } from '@/data/store/demo-store'
+import { type DemoDatabaseV5, type FinanceData } from '@/data/store/demo-store'
 import { REFERENCE_PREFIX, type ReferenceSeries, workOrderBillId } from '@/data/store/finance-reconcile'
 import { REPORT_RANGE_PRESETS } from '@/types'
 
@@ -10,7 +10,7 @@ import { REPORT_RANGE_PRESETS } from '@/types'
  * tests after every scenario and by browser QA. Problems are reported, never
  * "fixed" here: changing financial records is a decision for a person.
  */
-export function checkFinanceIntegrity(db: DemoDatabase): string[] {
+export function checkFinanceIntegrity(db: FinanceData): string[] {
   const issues: string[] = []
   const fail = (message: string) => issues.push(message)
 
@@ -145,7 +145,7 @@ export function checkFinanceIntegrity(db: DemoDatabase): string[] {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Settings invariants (v6): a valid, ordered rule history and valid workspace settings. */
-function checkSettings(db: DemoDatabase, fail: (message: string) => void) {
+function checkSettings(db: FinanceData, fail: (message: string) => void) {
   const { rules } = db.finance
   if (!Array.isArray(rules) || rules.length === 0) {
     fail('finance settings: no rule version')
@@ -179,7 +179,7 @@ function checkSettings(db: DemoDatabase, fail: (message: string) => void) {
  * and for rent the late-fee eligibility and amount. `before` uses the inline
  * v5 rule; `after` uses the rule versions.
  */
-export function assertSameFinanceOutcomes(before: DemoDatabaseV5, after: DemoDatabase, today: string): void {
+export function assertSameFinanceOutcomes(before: DemoDatabaseV5, after: FinanceData, today: string): void {
   const payments = paymentsByCharge(after.payments)
   const types = new Map(after.properties.map((property) => [property.id, property.type]))
   const fees = new Set(after.charges.map((charge) => charge.parentChargeId).filter(Boolean))
@@ -197,7 +197,7 @@ export function assertSameFinanceOutcomes(before: DemoDatabaseV5, after: DemoDat
   if (differences.length > 0) throw new Error(`Finance outcomes changed for ${differences.length} charges (first: ${differences.slice(0, 5).join(', ')})`)
 }
 
-export function assertFinanceIntegrity(db: DemoDatabase): void {
+export function assertFinanceIntegrity(db: FinanceData): void {
   const issues = checkFinanceIntegrity(db)
   if (issues.length > 0) throw new Error(`Finance integrity check failed:\n${issues.slice(0, 20).join('\n')}`)
 }

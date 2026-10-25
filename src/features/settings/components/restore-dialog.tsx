@@ -52,7 +52,7 @@ export function RestoreDialog({
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Restore from backup</DialogTitle>
-          <DialogDescription>Replaces everything in this browser with the backup: properties, tenants, leases, maintenance, vendors, Finance records and workspace settings.</DialogDescription>
+          <DialogDescription>Replaces everything in this browser with the backup: properties, tenants, leases, maintenance, vendors, Finance records, staff, workspace settings and your profile.</DialogDescription>
         </DialogHeader>
         <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body text-warning dark:bg-warning/15">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />

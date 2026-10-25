@@ -4,6 +4,7 @@ import { AppLayout } from '@/app/layouts/app-layout'
 import { appLayoutLoader } from '@/app/layouts/app-layout.loader'
 import { FixedFormatProvider } from '@/app/providers/settings-provider'
 import { AuthLayout } from '@/app/layouts/auth-layout'
+import { PublicLayout } from '@/app/layouts/public-layout'
 import { navHandle, type RouteHandle } from '@/app/routes/route-handle'
 import { AppLoadingScreen } from '@/app/routes/app-loading-screen'
 import { NotFoundPage } from '@/app/routes/not-found-page'
@@ -14,6 +15,7 @@ import { maintenanceHandles } from '@/features/maintenance/maintenance.handles'
 import { tenantHandles } from '@/features/tenants/tenants.handles'
 import { financeHandles } from '@/features/finance/finance.handles'
 import { vendorHandles } from '@/features/vendors/vendors.handles'
+import { staffHandles } from '@/features/staff/staff.handles'
 
 /** Feature pages are code-split; each module loads on first visit. */
 export const routes: RouteObject[] = [
@@ -31,6 +33,51 @@ export const routes: RouteObject[] = [
             lazy: async () => ({
               Component: (await import('@/features/auth/pages/login-page')).LoginPage,
             }),
+          },
+          {
+            path: 'signup',
+            handle: { title: 'Create account' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/auth/pages/signup-page')).SignupPage }),
+          },
+          {
+            path: 'forgot-password',
+            handle: { title: 'Reset your password' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/auth/pages/forgot-password-page')).ForgotPasswordPage }),
+          },
+          {
+            path: 'check-email',
+            handle: { title: 'Check your email' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/auth/pages/check-email-page')).CheckEmailPage }),
+          },
+          {
+            path: 'reset-password',
+            handle: { title: 'Choose a new password' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/auth/pages/reset-password-page')).ResetPasswordPage }),
+          },
+          {
+            path: 'verify-email',
+            handle: { title: 'Verify your email' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/auth/pages/verify-email-page')).VerifyEmailPage }),
+          },
+        ],
+      },
+      {
+        Component: PublicLayout,
+        children: [
+          {
+            path: 'privacy',
+            handle: { title: 'Privacy policy' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/legal/pages/privacy-page')).PrivacyPage }),
+          },
+          {
+            path: 'terms',
+            handle: { title: 'Terms of service' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/legal/pages/terms-page')).TermsPage }),
+          },
+          {
+            path: 'cookies',
+            handle: { title: 'Cookies and local storage' } satisfies RouteHandle,
+            lazy: async () => ({ Component: (await import('@/features/legal/pages/cookies-page')).CookiesPage }),
           },
         ],
       },
@@ -414,17 +461,61 @@ export const routes: RouteObject[] = [
           {
             path: 'staff',
             handle: navHandle('/staff'),
-            lazy: async () => ({
-              Component: (await import('@/features/staff/pages/staff-page')).StaffPage,
-            }),
+            children: [
+              {
+                index: true,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ StaffPage }, { staffListLoader }] = await Promise.all([import('@/features/staff/pages/staff-page'), import('@/features/staff/staff.loaders')])
+                  return { Component: StaffPage, loader: staffListLoader }
+                },
+              },
+              {
+                path: 'new',
+                handle: staffHandles.create,
+                lazy: async () => {
+                  const [{ StaffCreatePage }, { staffCreateLoader }] = await Promise.all([import('@/features/staff/pages/staff-create-page'), import('@/features/staff/staff.loaders')])
+                  return { Component: StaffCreatePage, loader: staffCreateLoader }
+                },
+              },
+              {
+                path: ':staffId',
+                handle: staffHandles.detail,
+                shouldRevalidate: skipSearchParamRevalidation,
+                lazy: async () => {
+                  const [{ StaffDetailsPage }, { staffDetailLoader }, { StaffRouteError }] = await Promise.all([
+                    import('@/features/staff/pages/staff-details-page'),
+                    import('@/features/staff/staff.loaders'),
+                    import('@/features/staff/components/staff-route-error'),
+                  ])
+                  return { Component: StaffDetailsPage, loader: staffDetailLoader, ErrorBoundary: StaffRouteError }
+                },
+              },
+              {
+                path: ':staffId/edit',
+                handle: staffHandles.edit,
+                lazy: async () => {
+                  const [{ StaffEditPage }, { staffEditLoader }, { StaffRouteError }] = await Promise.all([
+                    import('@/features/staff/pages/staff-edit-page'),
+                    import('@/features/staff/staff.loaders'),
+                    import('@/features/staff/components/staff-route-error'),
+                  ])
+                  return { Component: StaffEditPage, loader: staffEditLoader, ErrorBoundary: StaffRouteError }
+                },
+              },
+            ],
           },
           {
             path: 'notifications',
             handle: navHandle('/notifications'),
-            lazy: async () => ({
-              Component: (await import('@/features/notifications/pages/notifications-page'))
-                .NotificationsPage,
-            }),
+            shouldRevalidate: skipSearchParamRevalidation,
+            lazy: async () => {
+              const [{ NotificationsPage }, { notificationsLoader }] = await Promise.all([
+                import('@/features/notifications/pages/notifications-page'),
+                import('@/features/notifications/notifications.loaders'),
+              ])
+              return { Component: NotificationsPage, loader: notificationsLoader }
+            },
           },
           {
             path: 'settings',
@@ -436,6 +527,14 @@ export const routes: RouteObject[] = [
                 import('@/features/settings/settings.loaders'),
               ])
               return { Component: SettingsPage, loader: settingsLoader }
+            },
+          },
+          {
+            path: 'account',
+            handle: { title: 'Account', section: 'Management' } satisfies RouteHandle,
+            lazy: async () => {
+              const [{ AccountPage }, { accountLoader }] = await Promise.all([import('@/features/account/pages/account-page'), import('@/features/account/account.loaders')])
+              return { Component: AccountPage, loader: accountLoader }
             },
           },
           {

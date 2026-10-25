@@ -11,7 +11,7 @@ import {
   type ScheduleContext,
 } from '@/data/domain/finance-schedule'
 import { toCents } from '@/data/domain/money'
-import { type DemoDatabase } from '@/data/store/demo-store'
+import { type FinanceData } from '@/data/store/demo-store'
 import { formatMoney, type MoneyFormat } from '@/lib/format'
 import { type Charge, type Expense, type FinanceEvent } from '@/types'
 
@@ -53,13 +53,13 @@ export const REFERENCE_PREFIX = { income: 'INC', payment: 'PAY', expense: 'EXP' 
 export type ReferenceSeries = keyof typeof REFERENCE_PREFIX
 
 /** Takes the next human reference number for a series, e.g. "INC-10422". */
-export function nextReference(db: Pick<DemoDatabase, 'sequences'>, series: ReferenceSeries): string {
+export function nextReference(db: Pick<FinanceData, 'sequences'>, series: ReferenceSeries): string {
   const number = db.sequences[series]
   db.sequences[series] = number + 1
   return `${REFERENCE_PREFIX[series]}-${number}`
 }
 
-export function scheduleContext(db: Pick<DemoDatabase, 'finance' | 'tenantEvents'>, today: string): ScheduleContext {
+export function scheduleContext(db: Pick<FinanceData, 'finance' | 'tenantEvents'>, today: string): ScheduleContext {
   const cancelledLeaseIds = new Set<string>()
   for (const event of db.tenantEvents) if (event.kind === 'lease-cancelled' && event.leaseId) cancelledLeaseIds.add(event.leaseId)
   return { startPeriod: db.finance.startPeriod, throughPeriod: periodOf(today), cancelledLeaseIds }
@@ -67,7 +67,7 @@ export function scheduleContext(db: Pick<DemoDatabase, 'finance' | 'tenantEvents
 
 const SNAPSHOT_FIELDS = ['amountCents', 'dueDate', 'issuedOn', 'propertyId', 'unitId'] as const
 
-export function reconcileFinance(db: DemoDatabase, context: ReconcileContext): ReconcileReport {
+export function reconcileFinance(db: FinanceData, context: ReconcileContext): ReconcileReport {
   const report: ReconcileReport = { posted: 0, resynced: 0, autoVoided: 0, billsCreated: 0, changed: false }
   const schedule = scheduleContext(db, context.today)
   const charges = new Map(db.charges.map((charge) => [charge.id, charge]))

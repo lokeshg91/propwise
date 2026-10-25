@@ -20,9 +20,9 @@ All tokens are defined in `src/styles/globals.css`. Tailwind utilities are gener
 | `danger` | `#B91C1C` | `#FB8A8A` | Overdue, errors, destructive |
 | `info` | `#0369A1` | `#38BDF8` | Neutral information |
 
-Status colours are designed for **tinted** use: `bg-success/10 text-success` (light) and `dark:bg-success/15` (dark). Each pair meets WCAG AA (≥ 4.5:1). shadcn/ui's `destructive` token maps to `danger`.
+Status colours are designed for **tinted** use: `bg-success/10 text-success` (light) and `dark:bg-success/15` (dark). Each pair meets WCAG AA (≥ 4.5:1) at rest. Two interaction states use a stronger 20% tint and fall just below it: the destructive button's hover in light mode on the page background (`hover:bg-destructive/20`) measures 4.40:1, and a destructive menu item that is focused or highlighted in dark mode (`dark:data-[variant=destructive]:focus:bg-destructive/20`) measures 4.43:1. Both are 5.2:1 or higher at rest. shadcn/ui's `destructive` token maps to `danger`.
 
-The dark primary is lighter than the light primary and uses dark text (`primary-foreground: #0F172A`). This keeps both button labels and primary-coloured text accessible on dark surfaces.
+The dark primary is lighter than the light primary and uses dark text (`primary-foreground: #0F172A`). This keeps both button labels and primary-coloured text accessible on dark surfaces. One documented exception: on the 15% primary tint (`dark:bg-primary/15`) over a dark card, primary text measures 4.14:1. This is the Dashboard's maintenance "Open" label, kept unchanged so the Dashboard stays pixel-identical (see the README's Known limitations). The Maintenance status badge uses an 8% tint instead and measures 4.66:1.
 
 ## Typography
 

@@ -3,6 +3,10 @@ import { properties as seedProperties } from '@/data/mock/properties'
 import { applyDemoAttentionStates, buildTenancyRecords } from '@/data/mock/tenancy-seed'
 import { generateSeedUnits } from '@/data/mock/units'
 import { todayIso } from '@/data/domain/dates'
+import { accountProblems, repairAccount } from '@/data/domain/account-rules'
+import { staffProblems } from '@/data/domain/staff-rules'
+import { mergeNotifications, notificationProblems, pendingNotifications, repairNotifications } from '@/data/domain/notification-rules'
+import { assertCarriedOver, sampleInbox, sampleTeam, upgradeToV7 } from '@/data/store/account-upgrade'
 import { assertFinanceIntegrity, assertSameFinanceOutcomes } from '@/data/store/finance-integrity'
 import { decodeDatabase, encodeDatabase, isEncodedDatabase } from '@/data/store/storage-codec'
 import { reconcileFinance } from '@/data/store/finance-reconcile'
@@ -10,6 +14,7 @@ import { addFinance, upgradeToV6 } from '@/data/store/finance-upgrade'
 import { upgradeVendors } from '@/data/store/vendor-upgrade'
 import { readStorage, removeStorage, STORAGE_KEYS, writeStorage } from '@/lib/storage'
 import {
+  type Account,
   type AppSettings,
   type Charge,
   type Expense,
@@ -21,6 +26,9 @@ import {
   type Payment,
   type RecurringCharge,
   type SettingsEvent,
+  type StaffEvent,
+  type StaffMember,
+  type StoredNotification,
   type MaintenanceEvent,
   type Property,
   type PropertyEvent,
@@ -64,10 +72,31 @@ export interface DemoDatabase {
   settingsEvents: SettingsEvent[]
   /** Next numbers for requests ("MR-<n>") and finance references ("INC-", "PAY-", "EXP-"). */
   sequences: { request: number; income: number; payment: number; expense: number }
+  /** The signed-in user's profile and notification preferences (Phase 10.3). Never holds a password. */
+  account: Account
+  /** The team, including the signed-in user (Phase 10.4). */
+  staff: StaffMember[]
+  /** Staff changes, oldest first (Phase 10.4). */
+  staffEvents: StaffEvent[]
+  /** The inbox: the five sample items and event notifications, with their read state (Phase 10.5). */
+  notifications: StoredNotification[]
+  /** When event notifications started (creation or upgrade): nothing earlier is notified. */
+  notificationsCheckedAt: string
+}
+
+/** Fields added in v7 (Phase 10). */
+type V7Fields = 'account' | 'staff' | 'staffEvents' | 'notifications' | 'notificationsCheckedAt'
+
+/** Everything Finance reads and writes: the workspace without its version and the v7 additions. */
+export type FinanceData = Omit<DemoDatabase, 'version' | V7Fields>
+
+/** Phase 9 (v0.9) storage shape: no account or staff. */
+export interface DemoDatabaseV6 extends FinanceData {
+  version: 6
 }
 
 /** Phase 8 (v0.8) storage shape: one inline rule, no workspace settings. */
-export interface DemoDatabaseV5 extends Omit<DemoDatabase, 'version' | 'finance' | 'appSettings' | 'settingsEvents'> {
+export interface DemoDatabaseV5 extends Omit<FinanceData, 'finance' | 'appSettings' | 'settingsEvents'> {
   version: 5
   finance: FinanceSettingsV5
 }
@@ -105,7 +134,7 @@ export interface DemoDatabaseV3 extends Omit<DemoDatabaseV2, 'version'> {
   sequences: { request: number }
 }
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 let cache: DemoDatabase | null = null
 /**
@@ -114,10 +143,10 @@ let cache: DemoDatabase | null = null
  */
 let persistenceSuspended = false
 
-/** Fresh install: the sample data run through the same v4 → current step that upgrades stored data. */
+/** Fresh install: the sample data run through the same v4 → v6 → v7 steps that upgrade stored data. */
 function createSeed(now: Date = new Date()): DemoDatabase {
   const v4 = buildSeedV4(now)
-  return addFinance(v4, now, scopeOf(v4))
+  return upgradeToV7(addFinance(v4, now, scopeOf(v4)), now)
 }
 
 /** Everything in a fresh v4 seed is sample data. */
@@ -238,20 +267,28 @@ function isV5(value: unknown): value is DemoDatabaseV5 {
   return isObject(value) && value.version === 5 && hasArrays(value, V5_KEYS) && isObject(value.sequences) && isObject(value.finance)
 }
 
-function isV6(value: unknown): value is DemoDatabase {
-  return (
-    isObject(value) &&
-    value.version === SCHEMA_VERSION &&
-    hasArrays(value, [...V5_KEYS, 'settingsEvents']) &&
-    isObject(value.sequences) &&
-    isObject(value.finance) &&
-    Array.isArray(value.finance.rules) &&
-    isObject(value.appSettings)
-  )
+const hasV6Shape = (value: Record<string, unknown>) =>
+  hasArrays(value, [...V5_KEYS, 'settingsEvents']) &&
+  isObject(value.sequences) &&
+  isObject(value.finance) &&
+  Array.isArray(value.finance.rules) &&
+  isObject(value.appSettings)
+
+function isV6(value: unknown): value is DemoDatabaseV6 {
+  return isObject(value) && value.version === 6 && hasV6Shape(value)
+}
+
+/**
+ * Current data. The account is checked separately (`accountProblems`): a
+ * damaged or missing profile never hides the workspace's records.
+ */
+function isV7(value: unknown): value is DemoDatabase {
+  return isObject(value) && value.version === SCHEMA_VERSION && hasV6Shape(value)
 }
 
 /** The saved-data version of parsed data, or null when it isn't Propwise data in a known format. */
 export function savedDataVersion(value: unknown): number | null {
+  if (isV7(value)) return 7
   if (isV6(value)) return 6
   if (isV5(value)) return 5
   if (isV4(value)) return 4
@@ -289,33 +326,60 @@ export const migrationHooks: { beforeCommit: (db: DemoDatabase) => void } = { be
  *   version, and workspace settings and the settings history are added.
  *   Every record is copied unchanged, and every charge must keep the same
  *   status, balance, lateness and late-fee outcome.
+ * - v6 → v7: the signed-in user's account (the sample profile and default
+ *   notification preferences) and the sample team (the signed-in user as
+ *   member #1, plus fictional members) are added. Every v6 field is copied
+ *   unchanged, which is checked before the result can be saved.
  *
  * Record ids are fixed or derived from their source, so running the migration
  * again adds nothing. It works on a copy and returns a new object; the caller
- * saves it only if every step succeeds.
+ * saves it only if every step succeeds. Current (v7) data is checked, not
+ * changed: an invalid account makes it throw.
  */
 export function migrateDatabase(
-  data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3 | DemoDatabaseV4 | DemoDatabaseV5 | DemoDatabase,
+  data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3 | DemoDatabaseV4 | DemoDatabaseV5 | DemoDatabaseV6 | DemoDatabase,
   now: Date = new Date(),
 ): DemoDatabase {
-  // Already current: nothing to add.
-  if (isV6(data)) return structuredClone(data)
+  // Already current: the account, the team and the inbox must be valid. v7
+  // data saved before the team or the inbox existed (Phase 10.3 and 10.4
+  // builds) gets the sample team and the sample inbox.
+  if (isV7(data)) {
+    const problems = accountProblems(data.account)
+    if (problems.length > 0) throw new Error(`The account profile is invalid: ${problems[0]}.`)
+    const current = structuredClone(data)
+    if (lacksTeam(current)) Object.assign(current, sampleTeam(current, current.account))
+    const team = staffProblems(current.staff, current.staffEvents, current.account.profile.id)
+    if (team.length > 0) throw new Error(`The staff data is invalid: ${team[0]}.`)
+    if (lacksInbox(current)) Object.assign(current, sampleInbox(now))
+    const inbox = notificationProblems(current.notifications, current.notificationsCheckedAt)
+    if (inbox.length > 0) throw new Error(`The notifications are invalid: ${inbox[0]}.`)
+    return current
+  }
 
-  let current: DemoDatabase
-  if (isV5(data)) {
+  let v6: DemoDatabaseV6
+  if (isV6(data)) {
+    v6 = structuredClone(data)
+  } else if (isV5(data)) {
     // v5 → v6 reshapes settings only. Every charge must keep exactly the same
     // status, balance, lateness and late-fee outcome under the new rule model.
     const v5 = structuredClone(data)
-    current = upgradeToV6(v5)
-    assertSameFinanceOutcomes(v5, current, todayIso(now))
+    v6 = upgradeToV6(v5)
+    assertSameFinanceOutcomes(v5, v6, todayIso(now))
   } else {
     const v4 = isV4(data) ? structuredClone(data) : upgradeToV4(toV3(data, now), now)
-    current = addFinance(v4, now, canonicalScope(v4, now))
+    v6 = addFinance(v4, now, canonicalScope(v4, now))
   }
+  const current = upgradeToV7(v6, now)
+  assertCarriedOver(v6 as unknown as Record<string, unknown>, current as unknown as Record<string, unknown>)
   assertFinanceIntegrity(current)
   migrationHooks.beforeCommit(current)
   return current
 }
+
+/** v7 data from before Phase 10.4 has no staff collections. */
+const lacksTeam = (db: DemoDatabase) => !Array.isArray((db as Partial<DemoDatabase>).staff) && !Array.isArray((db as Partial<DemoDatabase>).staffEvents)
+/** v7 data from before Phase 10.5 has no inbox. */
+const lacksInbox = (db: DemoDatabase) => !Array.isArray((db as Partial<DemoDatabase>).notifications) && (db as Partial<DemoDatabase>).notificationsCheckedAt === undefined
 
 function toV3(data: DemoDatabaseV1 | DemoDatabaseV2 | DemoDatabaseV3, now: Date): DemoDatabaseV3 {
   let v3: DemoDatabaseV3
@@ -460,7 +524,7 @@ export function serializeDatabase(db: DemoDatabase): string {
   return JSON.stringify(encodeDatabase(db as unknown as DemoDatabase & Record<string, unknown>))
 }
 
-/** Parses stored text in any save format (v1–v4 plain JSON, v5 column-encoded). */
+/** Parses stored text in any save format (v1–v4 plain JSON, v5 and later column-encoded). */
 export function parseStoredDatabase(raw: string): unknown {
   const parsed: unknown = JSON.parse(raw)
   return isEncodedDatabase(parsed) ? decodeDatabase(parsed) : parsed
@@ -484,7 +548,23 @@ function fail(code: StorageErrorCode): never {
 
 /* ------------------------------------------------------------------- load */
 
-const reconcileNow = (db: DemoDatabase) => reconcileFinance(db, { today: todayIso(), now: new Date().toISOString() })
+/**
+ * Derived updates applied on load and with every change: rent and recurring
+ * charges for a new period (Finance), and notifications for events since
+ * the inbox was last checked (Phase 10.5). `advance` moves the check time to
+ * now even when nothing was added (every save does; a plain page load only
+ * does when it adds something, so browsing never writes). Events skipped
+ * because their category was off are never notified later.
+ */
+function reconcileNow(db: DemoDatabase, { advance, created }: { advance: boolean; created?: ReadonlySet<string> }): { changed: boolean } {
+  const now = new Date()
+  const finance = reconcileFinance(db, { today: todayIso(now), now: now.toISOString() })
+  const ids = sampleRecordIds()
+  const added = pendingNotifications(db, now, new Set([...ids.serviceRequests, ...ids.tenants]), created)
+  if (added.length > 0) db.notifications = mergeNotifications(db.notifications, added)
+  if ((advance || added.length > 0) && now.toISOString() > db.notificationsCheckedAt) db.notificationsCheckedAt = now.toISOString()
+  return { changed: finance.changed || added.length > 0 }
+}
 
 function load(): DemoDatabase {
   const raw = readStorage(STORAGE_KEYS.demoData)
@@ -496,35 +576,56 @@ function load(): DemoDatabase {
   } catch {
     return fresh() // Unreadable data can't be recovered; start fresh.
   }
-  if (isV6(parsed)) {
+  if (isV7(parsed) && !lacksTeam(parsed) && !lacksInbox(parsed)) {
+    // Staff records can't be repaired field by field (other records point to them); invalid ones make this a read-only session.
+    const team = Array.isArray(parsed.staff) && Array.isArray(parsed.staffEvents) ? staffProblems(parsed.staff, parsed.staffEvents, repairAccount(parsed.account).profile.id) : ['incomplete']
+    if (team.length > 0) return suspend(new Error(`The staff data is invalid: ${team[0]}.`))
     usedChars = charsFor(raw)
+    // A damaged profile (only possible by editing storage by hand) falls back to the sample values it can't use;
+    // nothing is written until the next change.
+    if (accountProblems(parsed.account).length > 0) {
+      console.warn('Propwise: the saved account profile is invalid; using default values for the fields that can’t be read.')
+      parsed.account = repairAccount(parsed.account)
+    }
+    // Damaged notifications (also only by hand) keep their valid items; nothing is written until the next change.
+    if (notificationProblems(parsed.notifications, parsed.notificationsCheckedAt).length > 0) {
+      console.warn('Propwise: some saved notifications are invalid and were left out.')
+      parsed.notifications = repairNotifications(parsed.notifications)
+      if (Number.isNaN(Date.parse(String(parsed.notificationsCheckedAt)))) parsed.notificationsCheckedAt = new Date().toISOString()
+    }
     // Post rent for a new month. Derived only, so if saving fails the same records are posted again next time.
-    if (reconcileNow(parsed).changed) trySave(parsed)
+    if (reconcileNow(parsed, { advance: false }).changed) trySave(parsed)
     return parsed
   }
-  if (!isV1(parsed) && !isV2(parsed) && !isV3(parsed) && !isV4(parsed) && !isV5(parsed)) return fresh()
+  if (!isV1(parsed) && !isV2(parsed) && !isV3(parsed) && !isV4(parsed) && !isV5(parsed) && !isV6(parsed) && !isV7(parsed)) return fresh()
 
   try {
     const migrated = migrateDatabase(parsed)
-    reconcileNow(migrated)
+    reconcileNow(migrated, { advance: false })
     // Persist straight away so a refresh doesn't migrate again. A migration that can't be saved is a failed migration.
     save(migrated)
     return migrated
   } catch (error) {
-    // Roll back: leave the stored data exactly as it was and don't overwrite
-    // it this session. The upgrade is retried on the next load.
-    persistenceSuspended = true
-    lastError = null
-    console.warn('Propwise: could not upgrade saved demo data; using sample data for this session without saving.', error)
-    const seed = createSeed()
-    reconcileNow(seed)
-    return seed
+    return suspend(error)
   }
+}
+
+/**
+ * Roll back: leave the stored data exactly as it was and don't overwrite it
+ * this session. The upgrade is retried on the next load.
+ */
+function suspend(error: unknown): DemoDatabase {
+  persistenceSuspended = true
+  lastError = null
+  console.warn('Propwise: could not upgrade saved demo data; using sample data for this session without saving.', error)
+  const seed = createSeed()
+  reconcileNow(seed, { advance: false })
+  return seed
 }
 
 function fresh(): DemoDatabase {
   const seed = createSeed()
-  reconcileNow(seed)
+  reconcileNow(seed, { advance: false })
   usedChars = -1
   return seed
 }
@@ -581,13 +682,20 @@ export function updateDatabase<T>(mutate: (db: DemoDatabase) => T): T {
   const current = readDatabase()
   if (persistenceSuspended) fail('suspended')
   const draft = structuredClone(current)
+  // Catch up first with the preferences as they were, so turning a category on never notifies earlier events.
+  reconcileNow(draft, { advance: true })
+  const before = recordIds(draft)
   const result = mutate(draft)
-  reconcileNow(draft)
+  const created = new Set([...recordIds(draft)].filter((id) => !before.has(id)))
+  reconcileNow(draft, { advance: true, created })
   save(draft)
   cache = draft
   notifyData()
   return result
 }
+
+/** Ids of the records whose creation is notified (payments, requests, tenants). */
+const recordIds = (db: DemoDatabase) => new Set([...db.payments.map((entry) => entry.id), ...db.serviceRequests.map((entry) => entry.id), ...db.tenants.map((entry) => entry.id)])
 
 /** Discards local changes and restores the original sample data. */
 export function resetDemoData(): void {
@@ -611,7 +719,8 @@ export function resetDemoData(): void {
  */
 export function replaceWorkspace(next: DemoDatabase): void {
   const draft = structuredClone(next)
-  reconcileNow(draft)
+  // Like a page load: the restored data is kept exactly unless something new is due.
+  reconcileNow(draft, { advance: false })
   assertFinanceIntegrity(draft)
   migrationHooks.beforeCommit(draft)
   save(draft)

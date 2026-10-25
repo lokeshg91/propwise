@@ -111,7 +111,7 @@ describe('fresh installation (v4)', () => {
   it('has the 15 original vendors unchanged, the 3 new vendors and their history', () => {
     const db = readDatabase()
     expect(db.version).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(6)
+    expect(SCHEMA_VERSION).toBe(7)
     expect(db.vendors).toHaveLength(18)
     for (const original of buildSeedVendors()) {
       const vendor = db.vendors.find((entry) => entry.id === original.id)

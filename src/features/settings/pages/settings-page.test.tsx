@@ -180,7 +180,7 @@ describe('Data & storage', () => {
     expect(downloads[0]?.name).toMatch(/^propwise-backup-\d{4}-\d{2}-\d{2}-\d{4}\.json$/)
     const backup = JSON.parse(await (downloads[0] as { text: Promise<string> }).text) as { data: string; appVersion: string; savedDataVersion: number }
     expect(backup.data).toBe(stored())
-    expect(backup.savedDataVersion).toBe(6)
+    expect(backup.savedDataVersion).toBe(7)
   })
 
   it('reset: needs a downloaded backup and the word RESET, then saves the sample workspace', async () => {

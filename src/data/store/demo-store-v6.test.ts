@@ -67,6 +67,11 @@ function toV5(db: DemoDatabase, rule = db.finance.rules[0]): DemoDatabaseV5 {
   const copy = structuredClone(db) as unknown as Record<string, unknown>
   delete copy.appSettings
   delete copy.settingsEvents
+  delete copy.account
+  delete copy.staff
+  delete copy.staffEvents
+  delete copy.notifications
+  delete copy.notificationsCheckedAt
   const { rules: _rules, ...finance } = db.finance
   void _rules
   copy.finance = { ...structuredClone(finance), graceDays: rule?.graceDays, lateFee: structuredClone(rule?.lateFee) }
@@ -88,11 +93,11 @@ async function userV5(rule?: { graceDays: number; lateFee: { residentialCents: n
   return v5
 }
 
-describe('v5 → v6 upgrade', () => {
+describe('v5 → v6 upgrade (then v6 → v7)', () => {
   it('keeps every record byte for byte and only reshapes settings', async () => {
     const v5 = await userV5()
     const v6 = migrateDatabase(structuredClone(v5), NOW)
-    expect(v6.version).toBe(6)
+    expect(v6.version).toBe(7)
     for (const key of RECORD_KEYS) expect(JSON.stringify(v6[key])).toBe(JSON.stringify(v5[key]))
     const { graceDays, lateFee, ...rest } = v5.finance
     const { rules, ...after } = v6.finance
@@ -102,7 +107,7 @@ describe('v5 → v6 upgrade', () => {
     ])
     expect(v6.appSettings).toEqual(DEFAULT_APP_SETTINGS)
     expect(v6.settingsEvents).toEqual([])
-    expect(Object.keys(v6).sort()).toEqual([...Object.keys(v5), 'appSettings', 'settingsEvents'].sort())
+    expect(Object.keys(v6).sort()).toEqual([...Object.keys(v5), 'appSettings', 'settingsEvents', 'account', 'staff', 'staffEvents', 'notifications', 'notificationsCheckedAt'].sort())
     expect(checkFinanceIntegrity(v6)).toEqual([])
   })
 
@@ -144,8 +149,8 @@ describe('v5 → v6 upgrade', () => {
     storeV5(await userV5())
     const first = readDatabase()
     const raw = stored() ?? ''
-    expect(JSON.parse(raw)).toMatchObject({ version: 6, encoding: 'columns-1' })
-    expect(savedDataVersion(parseStoredDatabase(raw))).toBe(6)
+    expect(JSON.parse(raw)).toMatchObject({ version: 7, encoding: 'columns-1' })
+    expect(savedDataVersion(parseStoredDatabase(raw))).toBe(7)
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, raw)
     expect(readDatabase()).toEqual(first)
@@ -208,10 +213,10 @@ describe('v5 → v6 upgrade', () => {
   })
 })
 
-describe('fresh installation (v6)', () => {
+describe('fresh installation (v7)', () => {
   it('starts with one rule version from the first Finance month and default workspace settings', () => {
     const db = readDatabase()
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(7)
     expect(db.finance.rules).toEqual([
       { id: INITIAL_RULE_ID, effectiveFrom: `${db.finance.startPeriod}-01`, graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 }, createdAt: db.finance.createdAt },
     ])

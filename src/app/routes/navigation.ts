@@ -16,7 +16,7 @@ export interface NavItem {
   label: string
   path: string
   icon: LucideIcon
-  /** Short description used by placeholder pages and search. */
+  /** Short description used by search. */
   description: string
 }
 
@@ -84,7 +84,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Staff',
         path: '/staff',
         icon: UserCog,
-        description: 'Team members, roles, assignments and schedules.',
+        description: 'Team members, roles and property assignments.',
       },
       {
         label: 'Notifications',
@@ -96,7 +96,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Settings',
         path: '/settings',
         icon: Settings,
-        description: 'Workspace, profile, appearance and notification preferences.',
+        description: 'Workspace, appearance, Finance, rent rules and data & storage.',
       },
     ],
   },

@@ -49,7 +49,7 @@ export function ResetDialog({ summary, onClose, onReset }: { summary: WorkspaceS
           <div className="flex flex-col gap-1 text-foreground/85">
             <p>
               <span className="font-medium text-danger">All data in this browser will be deleted</span>, including properties, units, tenants, leases, maintenance requests and work orders, vendors, charges,
-              payments, bills, recurring charges, activity history and workspace settings (currency, region, payment terms, rule versions).
+              payments, bills, recurring charges, staff members you added, notifications, activity history, workspace settings (currency, region, payment terms, rule versions) and your profile and notification preferences. The sample profile, sample team and sample notifications come back.
             </p>
             <p>
               {created === null
@@ -57,7 +57,7 @@ export function ResetDialog({ summary, onClose, onReset }: { summary: WorkspaceS
                 : created > 0
                   ? `This includes ${number(created)} ${created === 1 ? 'record' : 'records'} you created. They can’t be recovered without a backup.`
                   : 'Changes you made to sample records are lost too.'}{' '}
-              Your theme and sidebar preferences are kept.
+              Your theme and sidebar preferences are kept, and you stay signed in.
             </p>
           </div>
         </div>

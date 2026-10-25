@@ -1,5 +1,102 @@
 # Changelog
 
+## 0.10.0 — Accounts, Staff & Notifications
+
+### Added
+- **Policy pages** (`/privacy`, `/terms`, `/cookies`) in a public layout, reachable whether or not you're signed in.
+  - Each page has numbered sections, contents (sticky on desktop, collapsible on phones) and a print-friendly layout.
+  - The text is **sample content, not legal advice**, with visible placeholders for the operator's name, contact email and jurisdiction (`LEGAL_DETAILS` in `src/features/legal/lib/policies.ts`).
+  - The Cookies page lists every browser storage key from `STORAGE_ENTRIES` and states that no cookies are used.
+  - Links appear in the sign-in footer and in Settings → Data & storage.
+- **Demo authentication** (see [`docs/auth.md`](docs/auth.md)): `/login`, `/signup`, `/forgot-password`, `/check-email`, `/reset-password` and `/verify-email`.
+  - Every page has validation, live password rules, show/hide password and a visible **Demo** notice.
+  - No account is created, no email is sent and no password is checked or stored. Success messages say so.
+  - **Demo session** (`propwise-session`): signed in by default; **Sign out** sets the signed-out state, and other tabs follow.
+  - **Route guard:** signed-out visits to any app page redirect to `/login?next=…`, and signing in returns you to the same-app path given in `next` (`safeNext` refuses anything else).
+  - Demo reset and verification links use random, format-checked tokens that are removed from the address bar after use and never stored.
+- **Account** (`/account`), opened from **Profile** in the user menu (see [`docs/account.md`](docs/account.md)):
+  - **Profile:** name, job title, email, phone and an optional photo. The photo is cropped and resized in the browser to at most 256 × 256 px and capped in size; the original file is never kept.
+  - **Password:** a demo change-password form that checks the rules but stores nothing.
+  - **Notification preferences:** in-app on/off for Maintenance, Payments, Leases, Tenants and Workspace.
+  - **Sign out**, and a link to back up or reset the workspace.
+  - The header shows the saved name, job title and photo.
+- **Staff** (`/staff`, `/staff/new`, `/staff/:id`, `/staff/:id/edit`) replaces the placeholder (see [`docs/staff.md`](docs/staff.md)):
+  - **Team directory:** counts; search by name, job title, email, phone digits or property; status, role and property filters kept in the URL; cards on mobile.
+  - **Roles and access** (`?tab=roles`): six fixed roles (Owner, Admin, Property manager, Maintenance coordinator, Leasing agent, Accountant) and a read-only access matrix.
+  - **Member pages:** add and edit with property assignments; Overview, Properties and Activity tabs; deactivate, reactivate and delete, with a full history.
+  - **Rules:**
+    - email addresses are unique across the team, including your own profile;
+    - you can't deactivate or delete yourself, or change your own role;
+    - the last active Owner or Admin can't be deactivated, deleted or given a role without staff and settings access.
+  - Your staff record and your profile stay in sync in both directions.
+  - A fictional sample team of 8, plus you as Owner, flagged `demo`.
+- **Notifications** (`/notifications`) replaces the placeholder (see [`docs/notifications.md`](docs/notifications.md)):
+  - **One saved inbox** feeds the header menu, the sidebar badge and the page.
+  - **Filters:** read status (All, Unread, Read) and type, kept in the URL.
+  - **Actions:** Open (goes to the record and marks it read), Mark read / unread, Mark all read, and a link to the notification settings.
+  - **Event notifications** are created when something happens after the workspace was created or upgraded: a payment recorded, a bill becoming overdue, a maintenance request created or passing its target, a lease entering its last 30 days, a tenant added.
+  - Ids are deterministic, so nothing is notified twice. Your preferences are respected, and at most 200 event notifications are kept.
+
+### Changed
+- **Saved data format v6 → v7**, upgraded automatically on first load.
+  - New: `account`, `staff`, `staffEvents`, `notifications` and `notificationsCheckedAt`.
+  - Every v6 field is carried over byte for byte, and the Finance integrity check runs as before. A failed upgrade leaves the stored data untouched and makes the session read-only.
+  - v0.9.0 (v6) backups restore and upgrade the same way.
+- **Notification read state is saved.** Earlier versions kept "Mark all read" in memory only, so a reload brought the unread items back.
+- The user menu's **Profile** item opens `/account`; **Settings** still opens `/settings`.
+- `/login` is now part of the demo sign-in flow with a route guard. In v0.9.0 the form only opened the Dashboard, and **Sign out** only went to `/login`.
+- **Disclosures follow the data:**
+  - `STORAGE_ENTRIES` and the Cookies and Privacy pages describe the profile, staff, notifications and the session key;
+  - the reset and restore dialogs list them;
+  - Data & storage record counts include staff members.
+- **Reset workspace** also restores the sample profile, team and inbox. Theme, sidebar and the demo session are kept.
+- **For developers:** `src/data/services/user-service.ts` is replaced by `account-service.ts` (`getCurrentUser`, `getAccount`, `updateProfile`, `updateNotificationPreferences`). Finance helpers take `FinanceData`, the workspace without `version` and the new collections (a type-only change).
+- **For developers:** `ModulePlaceholder` (`src/components/shared/module-placeholder.tsx`) was removed; every navigation item now has a real page.
+
+### Fixed
+- **Maintenance "Open" status in dark mode** now meets WCAG AA text contrast: 4.66:1 (was 4.14:1). This covers the Maintenance list (table and cards), request details, the request mini-lists and the property and tenant Maintenance tabs. Light mode is unchanged. The Dashboard's own "Open" label is unchanged (see Known limitations).
+
+### Unchanged
+- **The Dashboard is pixel-identical to v0.9.0 (and v0.8.0):** content, header, notification dot and sidebar badge "3", in light and dark at every width tested.
+  - A fresh or just-upgraded workspace has exactly the five sample notifications, three of them unread, with their ages relative to page load as before.
+  - The default profile is still Alex Morgan, Portfolio Manager, with initials and no photo.
+- **A fresh browser is signed in**, so links into the app work as before.
+- No new dependencies. No new storage key besides `propwise-session`, and no cookies.
+
+### Testing
+- **Chromium (automated): complete.**
+  - Unit tests: 760/760, in local time and UTC.
+  - Every Phase 2–10 browser suite passes.
+  - Dashboard pixel comparison: 32/32 identical.
+  - The real v0.9.0 → v0.10.0 upgrade and backup restore were checked.
+  - An all-routes sweep (54 routes × light/dark × 5 widths) checked headings, overflow, contrast and console errors.
+- **Safari and Firefox: not yet tested.** Automated runs weren't possible from the build environment. Manual testing is pending and will be reported separately.
+
+### Deferred
+- Real authentication, email delivery, password storage, two-factor sign-in, a sessions list and invite acceptance. All auth flows are labelled demos.
+- **Staff:** enforcing roles (they describe access only), invitations, schedules, and request assignment to staff.
+- **Notifications:** email or push delivery, a background job for date events, and system events beyond the samples.
+
+### Known limitations
+- **Dashboard "Open" status in dark mode is 4.14:1**, below the WCAG AA 4.5:1 for normal text. It's unchanged since v0.8.0 and kept so the Dashboard stays pixel-identical; the Maintenance pages were fixed instead.
+- **Two interaction states are just below WCAG AA's 4.5:1**, both unchanged since v0.9.0:
+  - a destructive button **hovered** in light mode on the page background measures 4.40:1 (5.22:1 at rest; already listed for 0.9.0);
+  - a destructive menu item (Delete, Void charge) that is **focused or highlighted** in dark mode measures 4.43:1 (6.34:1 at rest). This was found during the 0.10.0 review.
+- **Safari and Firefox are untested** in this release (see Testing).
+- **Demo auth:**
+  - any valid email and password signs in, and `/login` keeps its sample email prefill after a profile email change;
+  - a pending email is held in memory only and is lost on refresh;
+  - refreshing `/verify-email` after the link was used shows the pending state, not "expired".
+- **Photos are stored as JPEG:** transparency turns white, and an animated GIF keeps only its first frame. Profile email changes aren't verified.
+- **Staff:** roles aren't enforced, adding a member creates no login, your own record is the Owner in a fresh workspace, and property assignments don't filter other modules.
+- **Notifications:**
+  - nothing is emailed or pushed;
+  - date events are noticed when the app is opened or saves something;
+  - only the newest 200 event notifications are kept;
+  - the sample notifications keep their fictional text and have no link.
+- **Saved workspaces gain unread notifications over time.** A saved workspace opened days later may show more than 3 unread, because sample requests pass their targets and sample leases near their end; a fresh or just-upgraded one always shows 3.
+- The production build still prints Vite's chunk-size warning (a chunk over 500 kB), as in v0.9.0.
+
 ## 0.9.0 — Reports & Settings
 
 ### Added

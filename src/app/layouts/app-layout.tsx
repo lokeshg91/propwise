@@ -1,29 +1,46 @@
-import { useCallback, useState } from 'react'
-import { Outlet, useLoaderData, useMatches } from 'react-router'
+import { useCallback, useState, useSyncExternalStore } from 'react'
+import { Navigate, Outlet, useLoaderData, useLocation, useMatches } from 'react-router'
+import { toast } from 'sonner'
 
 import { type appLayoutLoader } from '@/app/layouts/app-layout.loader'
 import { AppHeader } from '@/app/layouts/components/app-header'
 import { AppSidebar } from '@/app/layouts/components/app-sidebar'
 import { MobileNav } from '@/app/layouts/components/mobile-nav'
 import { StorageBanner } from '@/app/layouts/components/storage-banner'
+import { markAllNotificationsRead, readCurrentUser, readNotifications, subscribeAccount, subscribeNotifications } from '@/data/services'
 import { getActiveHandle } from '@/app/routes/route-handle'
 import { isBoolean, usePersistedState } from '@/hooks/use-persisted-state'
+import { loginPathFor } from '@/lib/safe-next'
+import { isSignedIn, signedOutInThisTab, subscribeSession } from '@/lib/session'
 import { STORAGE_KEYS } from '@/lib/storage'
 import { cn } from '@/lib/utils'
 
 /** Authenticated application shell: sidebar, header and routed content. */
 export function AppLayout() {
-  const { user, notifications: initialNotifications } = useLoaderData<typeof appLayoutLoader>()
+  const { user: loadedUser, notifications: initialNotifications } = useLoaderData<typeof appLayoutLoader>()
+  // The header follows the saved profile as soon as it changes (Account page, restore, reset).
+  const user = useSyncExternalStore(subscribeAccount, readCurrentUser, readCurrentUser) ?? loadedUser
   const handle = getActiveHandle(useMatches())
 
   const [collapsed, setCollapsed] = usePersistedState(STORAGE_KEYS.sidebarCollapsed, false, isBoolean)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [notifications, setNotifications] = useState(initialNotifications)
-
+  // Header menu, sidebar badge and the Notifications page all read the saved inbox.
+  const notifications = useSyncExternalStore(subscribeNotifications, readNotifications, readNotifications) ?? initialNotifications
   const unreadCount = notifications.filter((notification) => !notification.read).length
   const markAllRead = useCallback(() => {
-    setNotifications((items) => items.map((item) => ({ ...item, read: true })))
+    markAllNotificationsRead().catch((error: unknown) => {
+      toast.error('Couldn’t mark notifications read', { description: error instanceof Error ? error.message : undefined })
+    })
   }, [])
+
+  // Signed out while a page is open: from another tab, go to sign-in and offer to come back here;
+  // from this tab's Sign out, go to plain sign-in (the user menu navigates there too).
+  const signedIn = useSyncExternalStore(subscribeSession, isSignedIn, isSignedIn)
+  const location = useLocation()
+  if (!signedIn) {
+    const target = signedOutInThisTab() ? '/login' : loginPathFor(`${location.pathname}${location.search}${location.hash}`)
+    return <Navigate to={target} replace />
+  }
 
   return (
     <div className="min-h-svh bg-background">

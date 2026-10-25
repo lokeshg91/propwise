@@ -15,6 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useSignOut } from '@/features/auth/lib/use-sign-out'
 import { getInitials } from '@/lib/format'
 import { type User } from '@/types'
 
@@ -24,6 +25,7 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const initials = getInitials(user.name)
+  const onSignOut = useSignOut()
 
   return (
     <DropdownMenu>
@@ -62,7 +64,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/settings">
+            <Link to="/account">
               <UserIcon aria-hidden="true" />
               Profile
             </Link>
@@ -84,11 +86,9 @@ export function UserMenu({ user }: UserMenuProps) {
           </DropdownMenuSub>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/login">
-            <LogOut aria-hidden="true" />
-            Sign out
-          </Link>
+        <DropdownMenuItem onSelect={onSignOut}>
+          <LogOut aria-hidden="true" />
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

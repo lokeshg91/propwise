@@ -1,12 +1,4 @@
-import {
-  Bell,
-  CalendarClock,
-  CircleCheck,
-  type LucideIcon,
-  Settings,
-  UserPlus,
-  Wrench,
-} from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { IconButton } from '@/components/shared/icon-button'
@@ -18,17 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { setNotificationRead } from '@/data/services'
+import { CATEGORY_STYLES } from '@/features/notifications/lib/notification-meta'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { type AppNotification, type NotificationCategory } from '@/types'
+import { type AppNotification } from '@/types'
 
-const CATEGORY_STYLES: Record<NotificationCategory, { icon: LucideIcon; className: string }> = {
-  maintenance: { icon: Wrench, className: 'bg-warning/10 text-warning dark:bg-warning/15' },
-  payment: { icon: CircleCheck, className: 'bg-success/10 text-success dark:bg-success/15' },
-  lease: { icon: CalendarClock, className: 'bg-info/10 text-info dark:bg-info/15' },
-  tenant: { icon: UserPlus, className: 'bg-primary/10 text-primary dark:bg-primary/15' },
-  system: { icon: Settings, className: 'bg-muted text-muted-foreground' },
-}
+/** The newest few; the Notifications page lists them all. */
+const MENU_LIMIT = 10
 
 interface NotificationsMenuProps {
   notifications: AppNotification[]
@@ -75,11 +64,17 @@ export function NotificationsMenu({ notifications, onMarkAllRead }: Notification
         </div>
         <DropdownMenuSeparator className="mx-0 my-0" />
         <div className="max-h-[22rem] overflow-y-auto p-1.5">
-          {notifications.map((notification) => {
+          {notifications.slice(0, MENU_LIMIT).map((notification) => {
             const { icon: Icon, className } = CATEGORY_STYLES[notification.category]
             return (
               <DropdownMenuItem key={notification.id} asChild className="items-start gap-3 px-2.5 py-2.5">
-                <Link to="/notifications">
+                <Link
+                  to={notification.link ?? '/notifications'}
+                  onClick={() => {
+                    // Opening a notification marks it read; a failed save leaves it unread.
+                    if (!notification.read) setNotificationRead(notification.id, true).catch(() => undefined)
+                  }}
+                >
                   <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', className)}>
                     <Icon className="size-4" aria-hidden="true" />
                   </span>

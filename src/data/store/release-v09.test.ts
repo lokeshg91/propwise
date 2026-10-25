@@ -42,10 +42,10 @@ function derivedStates(db: DemoDatabase) {
 }
 
 describe('v0.9.0 release: fresh install', () => {
-  it('is saved data v6 with one rule version equal to the v0.8 rule, default settings and no history', () => {
+  it('is saved data v7 (v6 plus the account) with one rule version equal to the v0.8 rule, default settings and no history', () => {
     const db = readDatabase()
-    expect(SCHEMA_VERSION).toBe(6)
-    expect(db.version).toBe(6)
+    expect(SCHEMA_VERSION).toBe(7) // v0.9's v6 plus the account (Phase 10.3)
+    expect(db.version).toBe(7)
     expect(db.finance.rules).toHaveLength(1)
     expect(db.finance.rules[0]).toMatchObject({ effectiveFrom: `${db.finance.startPeriod}-01`, graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 } })
     expect(db.finance).toMatchObject({ currency: 'USD', locale: 'en-US', paymentTermsDays: 30 })

@@ -94,11 +94,11 @@ function userV4(): DemoDatabaseV4 {
   return v4
 }
 
-describe('fresh installation (v6)', () => {
+describe('fresh installation (v7)', () => {
   it('seeds a consistent year of fictional finance history', () => {
     const db = readDatabase()
     expect(db.version).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(6)
+    expect(SCHEMA_VERSION).toBe(7)
     expect(db.finance).toMatchObject({ currency: 'USD', locale: 'en-US', startPeriod: '2025-11', paymentTermsDays: 30 })
     expect(db.finance.rules).toEqual([expect.objectContaining({ id: 'rule_initial', effectiveFrom: '2025-11-01', graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 } })])
     expect(checkFinanceIntegrity(db)).toEqual([])
@@ -142,7 +142,7 @@ describe('fresh installation (v6)', () => {
   })
 })
 
-describe('Phase 7 (v4) → v6 migration (adds Finance)', () => {
+describe('Phase 7 (v4) → v7 migration (adds Finance)', () => {
   it('keeps every Phase 2–7 record exactly and only adds Finance', () => {
     const v4 = userV4()
     const v5 = migrateDatabase(structuredClone(v4), NOW)
@@ -193,7 +193,7 @@ describe('Phase 7 (v4) → v6 migration (adds Finance)', () => {
     storeRaw(userV4())
     const first = readDatabase()
     const raw = stored() ?? ''
-    expect(JSON.parse(raw)).toMatchObject({ version: 6, encoding: 'columns-1' })
+    expect(JSON.parse(raw)).toMatchObject({ version: 7, encoding: 'columns-1' })
     expect(parseStoredDatabase(raw)).toEqual(first)
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, raw)
@@ -221,7 +221,7 @@ describe('Phase 7 (v4) → v6 migration (adds Finance)', () => {
     migrationHooks.beforeCommit = () => undefined
     resetDemoData()
     window.localStorage.setItem(STORAGE_KEYS.demoData, before ?? '')
-    expect(readDatabase().version).toBe(6)
+    expect(readDatabase().version).toBe(7)
     expect(isPersistenceSuspended()).toBe(false)
   })
 
@@ -238,12 +238,12 @@ describe('Phase 7 (v4) → v6 migration (adds Finance)', () => {
     expect(isPersistenceSuspended()).toBe(true)
   })
 
-  it('chains v1 → v6 with consistent finance data', () => {
+  it('chains v1 → v7 with consistent finance data', () => {
     const properties = structuredClone(seedProperties)
     const v1: DemoDatabaseV1 = { version: 1, properties, units: generateSeedUnits(properties), events: [] }
     storeRaw(v1)
     const db = readDatabase()
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(7)
     expect(db.units).toEqual(v1.units)
     expect(db.charges.length).toBeGreaterThan(1000)
     expect(checkFinanceIntegrity(db)).toEqual([])

@@ -33,4 +33,6 @@ export const STORAGE_KEYS = {
   theme: 'propwise-theme',
   sidebarCollapsed: 'propwise-sidebar-collapsed',
   demoData: 'propwise-demo-data',
+  /** Demo sign-in state: absent = signed in (the default); set only after Sign out. */
+  session: 'propwise-session',
 } as const

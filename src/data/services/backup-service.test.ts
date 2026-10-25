@@ -101,6 +101,11 @@ describe('backup export', () => {
     const v5 = structuredClone(readDatabase()) as unknown as Record<string, unknown>
     delete v5.appSettings
     delete v5.settingsEvents
+    delete v5.account
+    delete v5.staff
+    delete v5.staffEvents
+    delete v5.notifications
+    delete v5.notificationsCheckedAt
     const finance = v5.finance as Record<string, unknown>
     delete finance.rules
     Object.assign(finance, { graceDays: 5, lateFee: { residentialCents: 5000, commercialPercent: 5 } })
@@ -201,6 +206,11 @@ describe('backup inspection (independent of the download)', () => {
     Object.assign(finance, { graceDays: -1, lateFee: { residentialCents: 5000, commercialPercent: 5 } })
     delete db.appSettings
     delete db.settingsEvents
+    delete db.account
+    delete db.staff
+    delete db.staffEvents
+    delete db.notifications
+    delete db.notificationsCheckedAt
     db.version = 5
     expect(problemFor(JSON.stringify({ ...base(), savedDataVersion: 5, data: serializeDatabase(db as unknown as DemoDatabase) }))).toEqual([expect.stringMatching(/couldn’t be upgraded/)])
   })

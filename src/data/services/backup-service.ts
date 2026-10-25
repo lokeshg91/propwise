@@ -16,6 +16,7 @@ import {
   type DemoDatabase,
   type StorageStatus,
 } from '@/data/store/demo-store'
+import { SAMPLE_STAFF_IDS } from '@/data/mock/staff-seed'
 import { checkFinanceIntegrity } from '@/data/store/finance-integrity'
 import { simulateLatency } from '@/data/services/simulate-latency'
 import { APP_VERSION } from '@/lib/app-version'
@@ -54,7 +55,7 @@ export interface WorkspaceBackup {
 
 /* ---------------------------------------------------------------- counts */
 
-export const RECORD_TYPES = ['properties', 'units', 'tenants', 'leases', 'vendors', 'maintenanceRequests', 'workOrders', 'charges', 'payments', 'bills', 'recurringCharges'] as const
+export const RECORD_TYPES = ['properties', 'units', 'tenants', 'leases', 'vendors', 'maintenanceRequests', 'workOrders', 'charges', 'payments', 'bills', 'recurringCharges', 'staff'] as const
 export type RecordType = (typeof RECORD_TYPES)[number]
 export type RecordCounts = Record<RecordType, number>
 
@@ -70,6 +71,7 @@ export const RECORD_TYPE_LABELS: Record<RecordType, string> = {
   payments: 'Payments',
   bills: 'Bills',
   recurringCharges: 'Recurring charges',
+  staff: 'Staff members',
 }
 
 export interface WorkspaceCounts {
@@ -83,7 +85,8 @@ const emptyCounts = (): RecordCounts => Object.fromEntries(RECORD_TYPES.map((typ
 
 /**
  * Sample vs user-created records. Outside Finance a record is a sample when
- * its id is one of the fixed sample ids; Finance records carry a `demo` flag.
+ * its id is one of the fixed sample ids (staff too); Finance records carry a
+ * `demo` flag.
  * Activity history isn't counted. A sample record you edited still counts as
  * a sample record.
  */
@@ -104,6 +107,8 @@ export function countWorkspaceRecords(db: DemoDatabase): WorkspaceCounts {
   for (const record of db.payments) add('payments', record.demo === true)
   for (const record of db.expenses) add('bills', record.demo === true)
   for (const record of db.recurringCharges) add('recurringCharges', record.demo === true)
+  // The sample team has fixed ids; your own record counts as a sample record (it always exists).
+  for (const record of db.staff) add('staff', SAMPLE_STAFF_IDS.has(record.id))
   return counts
 }
 

@@ -93,6 +93,11 @@ function asV5(db: DemoDatabase): Record<string, unknown> {
   const copy = structuredClone(db) as unknown as Record<string, unknown>
   delete copy.appSettings
   delete copy.settingsEvents
+  delete copy.account
+  delete copy.staff
+  delete copy.staffEvents
+  delete copy.notifications
+  delete copy.notificationsCheckedAt
   const finance = copy.finance as Record<string, unknown>
   const rule = db.finance.rules[0]
   delete finance.rules
@@ -148,7 +153,7 @@ describe('restore from backup', () => {
     const result = await restoreBackup(text)
     expect(result.restoredFromVersion).toBe(5)
     const db = readDatabase()
-    expect(db.version).toBe(6)
+    expect(db.version).toBe(SCHEMA_VERSION)
     for (const key of ['properties', 'units', 'tenants', 'leases', 'vendors', 'serviceRequests', 'workOrders', 'charges', 'payments', 'expenses', 'recurringCharges', 'financeEvents'] as const) {
       expect(db[key]).toEqual(original[key])
     }
@@ -162,7 +167,7 @@ describe('restore from backup', () => {
     v4.version = 4
     v4.sequences = { request: readDatabase().sequences.request }
     await restoreBackup(backupOf(JSON.stringify(v4), 4, { appVersion: '0.7.0' }))
-    expect(readDatabase().version).toBe(6)
+    expect(readDatabase().version).toBe(SCHEMA_VERSION)
     expect(readDatabase().charges.length).toBeGreaterThan(1000)
   })
 
@@ -193,7 +198,7 @@ describe('restore from backup', () => {
     const before = snapshot()
     const db = structuredClone(readDatabase())
     ;(db.payments[0] as DemoDatabase['payments'][number]).chargeId = 'chg_missing'
-    const error = await failure(restoreBackup(backupOf(serializeDatabase(db), 6)))
+    const error = await failure(restoreBackup(backupOf(serializeDatabase(db), SCHEMA_VERSION)))
     expect(error instanceof Error && error.message).toMatch(/integrity/)
     expectUnchanged(before)
   })
@@ -234,14 +239,14 @@ describe('restore from backup', () => {
   })
 
   it('warns about, but accepts, a backup made by a newer app version with a supported format', () => {
-    const text = backupOf(serializeDatabase(readDatabase()), 6, { appVersion: '9.0.0' })
+    const text = backupOf(serializeDatabase(readDatabase()), SCHEMA_VERSION, { appVersion: '9.0.0' })
     const inspection = inspectBackup(text)
     expect(inspection.restorable).toBe(true)
     expect(inspection.warnings).toEqual([expect.stringMatching(/newer than this version/)])
   })
 
   it('is the way out of a read-only session', async () => {
-    const good = serializeBackup({ ...createBackup(NOW), data: serializeDatabase(readDatabase()), savedDataVersion: 6 })
+    const good = serializeBackup({ ...createBackup(NOW), data: serializeDatabase(readDatabase()), savedDataVersion: SCHEMA_VERSION })
     suspendSession()
     const suspendedRaw = stored()
     await restoreBackup(good)
@@ -294,7 +299,7 @@ describe('full workspace reset', () => {
     suspendSession()
     await resetWorkspaceData()
     expect(isPersistenceSuspended()).toBe(false)
-    expect(savedVersion()).toBe(6)
+    expect(savedVersion()).toBe(SCHEMA_VERSION)
   })
 })
 
